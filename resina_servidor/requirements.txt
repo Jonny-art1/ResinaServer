@@ -1,0 +1,5 @@
+Flask>=2.3
+Flask-Cors>=4.0
+Flask-Session>=0.5
+Werkzeug>=2.3
+gunicorn>=21.2

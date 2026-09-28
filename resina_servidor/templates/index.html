@@ -237,6 +237,33 @@
         .orcamento-info p { font-size: 13px; color: var(--text-light); }
         .orcamento-price { font-size: 24px; font-weight: 700; color: var(--gold); }
 
+        .table-wrap {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            overflow-x: auto;
+        }
+        table.data-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+        table.data-table th {
+            text-align: left; padding: 14px 20px; font-size: 12px; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-light); border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        table.data-table td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        table.data-table tbody tr { transition: background 0.2s; }
+        table.data-table tbody tr:last-child td { border-bottom: none; }
+        table.data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+        table.data-table tbody tr.low-stock-row { background: rgba(239,68,68,0.06); }
+        table.data-table tbody tr.low-stock-row:hover { background: rgba(239,68,68,0.1); }
+        .low-stock-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); display: inline-block; margin-right: 8px; box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+        .low-stock-badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px; background: rgba(239,68,68,0.15); color: var(--danger);
+        }
+        .ok-stock-badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px; background: rgba(16,185,129,0.15); color: var(--success);
+        }
+        .table-actions { display: flex; gap: 8px; }
+
         .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .report-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
         .report-value { font-size: 28px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
@@ -294,9 +321,64 @@
 
         .mobile-menu-btn { display: none; }
         @media (max-width: 1024px) { .mobile-menu-btn { display: flex; } }
+
+        .login-screen {
+            position: fixed; inset: 0; z-index: 3000; background: var(--bg);
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+        }
+        .login-card {
+            width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 40px 32px; box-shadow: var(--shadow);
+        }
+        .login-brand { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 32px; }
+        .login-brand-icon {
+            width: 56px; height: 56px; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 28px; color: var(--dark); box-shadow: 0 0 24px rgba(6,182,212,0.35);
+        }
+        .login-brand-text {
+            font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            letter-spacing: -0.5px;
+        }
+        .login-field { margin-bottom: 18px; }
+        .login-field label { display: block; font-size: 13px; color: var(--text-light); margin-bottom: 8px; }
+        .login-field input {
+            width: 100%; padding: 12px 16px; background: var(--dark); border: 1px solid var(--border);
+            border-radius: 12px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: all 0.3s;
+        }
+        .login-field input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(6,182,212,0.1); }
+        .login-error {
+            display: none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+            color: var(--danger); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 18px;
+        }
+        .login-btn { width: 100%; justify-content: center; margin-top: 4px; }
     </style>
 </head>
 <body>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="login-brand-icon">✦</div>
+                <div class="login-brand-text">Elements</div>
+            </div>
+            <div class="login-error" id="loginError"></div>
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <div class="login-field">
+                    <label for="loginUsername">Utilizador</label>
+                    <input type="text" id="loginUsername" autocomplete="username" required>
+                </div>
+                <div class="login-field">
+                    <label for="loginPassword">Palavra-passe</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary login-btn" id="loginSubmitBtn">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="appShell" style="display:none;">
     <header class="header">
         <div style="display:flex;align-items:center;gap:16px;">
             <button class="btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
@@ -310,6 +392,7 @@
             <button class="btn-icon" onclick="exportData()" title="Exportar Backup">💾</button>
             <button class="btn-icon" onclick="document.getElementById('importFile').click()" title="Importar Backup">📂</button>
             <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(this)">
+            <button class="btn-icon" onclick="handleLogout()" title="Sair">🚪</button>
         </div>
     </header>
 
@@ -389,6 +472,11 @@
             <div class="nav-item" onclick="showTab('orcamentos')" data-tab="orcamentos">
                 <span class="nav-icon">📋</span>
                 <span>Orçamentos</span>
+            </div>
+            <div class="nav-item" onclick="showTab('stock')" data-tab="stock">
+                <span class="nav-icon">🧱</span>
+                <span>Stock</span>
+                <span class="nav-badge" id="badgeStockBaixo" style="display:none;background:var(--danger);color:white;">0</span>
             </div>
             <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border);">
                 <div class="nav-item" onclick="showTab('config')" data-tab="config">
@@ -522,6 +610,72 @@
                 </div>
             </div>
 
+            <!-- Stock -->
+            <div id="tab-stock" class="tab-content" style="display:none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-title-icon">🧱</div>
+                        Stock de Materiais
+                    </div>
+                    <button class="btn btn-primary" onclick="openMaterialModal()">➕ Novo Material</button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Materiais</div>
+                        <div class="stat-value" id="statMateriaisTotal">0</div>
+                        <div class="stat-icon">🧱</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Em Stock Baixo</div>
+                        <div class="stat-value" id="statMateriaisBaixo" style="color:var(--danger);">0</div>
+                        <div class="stat-icon">⚠️</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Valor Total do Stock</div>
+                        <div class="stat-value" id="statMateriaisValor">€0</div>
+                        <div class="stat-icon">💰</div>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <div class="search-box">
+                        <input type="text" id="searchMateriais" placeholder="Buscar por nome ou fornecedor..." oninput="renderMateriais()">
+                    </div>
+                    <select class="filter-select" id="filterCategoria" onchange="loadMateriais()">
+                        <option value="">Todas as Categorias</option>
+                        <option value="resina">Resina</option>
+                        <option value="adesivo">Adesivo</option>
+                        <option value="folha">Folha</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Categoria</th>
+                                <th>Quantidade</th>
+                                <th>Mínimo</th>
+                                <th>Preço Unit.</th>
+                                <th>Fornecedor</th>
+                                <th>Status</th>
+                                <th>Atualizado</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="materiaisTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="materiaisEmpty" style="display:none;">
+                    <div class="empty-state-icon">🧱</div>
+                    <h3>Nenhum material cadastrado</h3>
+                    <p>Clique em "Novo Material" para começar a controlar seu stock.</p>
+                </div>
+            </div>
+
             <!-- Configurações -->
             <div id="tab-config" class="tab-content" style="display:none;">
                 <div class="section-header">
@@ -626,6 +780,22 @@
                         <input type="file" id="pedidoImagemInput" style="display:none" accept="image/*" onchange="previewPedidoImage(this)">
                         <input type="hidden" id="pedidoImagemUrl">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">PDF do Desenho (para impressão)</label>
+                        <div class="upload-area" id="pedidoPdfArea" onclick="document.getElementById('pedidoPdfInput').click()">
+                            <div id="pedidoPdfUploadText">
+                                <div style="font-size:32px;margin-bottom:8px;">📄</div>
+                                <div style="font-size:13px;color:var(--text-light);">Clique para enviar arquivo PDF</div>
+                            </div>
+                            <div id="pedidoPdfFileInfo" style="display:none;align-items:center;justify-content:center;gap:10px;padding:8px;">
+                                <span style="font-size:28px;">📄</span>
+                                <span id="pedidoPdfFileName" style="font-size:13px;color:var(--text);word-break:break-all;"></span>
+                                <button type="button" class="card-btn" onclick="event.stopPropagation();removePedidoPdf()" title="Remover PDF">🗑️</button>
+                            </div>
+                        </div>
+                        <input type="file" id="pedidoPdfInput" style="display:none" accept="application/pdf,.pdf" onchange="previewPedidoPdf(this)">
+                        <input type="hidden" id="pedidoPdfUrl">
+                    </div>
                     <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
                         <button type="button" class="btn btn-secondary" onclick="closePedidoModal()">Cancelar</button>
                         <button type="submit" class="btn btn-primary">💾 Salvar Pedido</button>
@@ -705,6 +875,73 @@
         </div>
     </div>
 
+    <!-- Modal Material -->
+    <div class="modal-overlay" id="materialModal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <div class="modal-title" id="materialModalTitle">Novo Material</div>
+                <button class="modal-close" onclick="closeMaterialModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="materialForm" onsubmit="saveMaterial(event)">
+                    <input type="hidden" id="materialId">
+                    <div class="form-row">
+                        <div class="form-group" style="flex:2;">
+                            <label class="form-label">Nome do Material *</label>
+                            <input type="text" class="form-input" id="materialNome" required placeholder="Ex: Resina Epóxi Cristal">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Categoria</label>
+                            <select class="form-select" id="materialCategoria">
+                                <option value="resina">Resina</option>
+                                <option value="adesivo">Adesivo</option>
+                                <option value="folha">Folha</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Quantidade Atual *</label>
+                            <input type="number" class="form-input" id="materialQuantidadeAtual" step="0.01" min="0" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Quantidade Mínima</label>
+                            <input type="number" class="form-input" id="materialQuantidadeMinima" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Unidade</label>
+                            <select class="form-select" id="materialUnidade">
+                                <option value="kg">kg</option>
+                                <option value="litros">litros</option>
+                                <option value="unidades">unidades</option>
+                                <option value="folhas">folhas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Preço Unitário (€)</label>
+                            <input type="number" class="form-input" id="materialPreco" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fornecedor</label>
+                        <input type="text" class="form-input" id="materialFornecedor" placeholder="Nome do fornecedor">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-textarea" id="materialNotas" placeholder="Observações adicionais..."></textarea>
+                    </div>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeMaterialModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Salvar Material</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Relatório Cliente -->
     <div class="modal-overlay" id="relatorioModal">
         <div class="modal" style="max-width:700px;">
@@ -718,6 +955,8 @@
         </div>
     </div>
 
+    </div><!-- /appShell -->
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -727,17 +966,84 @@ let currentTab = 'dashboard';
 let pedidos = [];
 let clientes = [];
 let orcamentos = [];
+let materiais = [];
 let editingPedido = null;
+let editingMaterial = null;
 let themeConfig = JSON.parse(localStorage.getItem('elements_theme') || '{}');
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+});
+
+// Autenticação
+async function checkAuth() {
+    try {
+        const res = await fetch('/api/check-auth');
+        const data = await res.json();
+        if (data.authenticated) {
+            showApp();
+        } else {
+            showLoginScreen();
+        }
+    } catch (e) {
+        showLoginScreen();
+    }
+}
+
+function showLoginScreen() {
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
     loadTheme();
     loadPedidos();
     loadClientes();
     loadOrcamentos();
+    loadMateriais();
     updateStats();
-});
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorBox = document.getElementById('loginError');
+    const btn = document.getElementById('loginSubmitBtn');
+    errorBox.style.display = 'none';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('loginForm').reset();
+            showApp();
+        } else {
+            errorBox.textContent = data.error || 'Credenciais inválidas';
+            errorBox.style.display = 'block';
+        }
+    } catch (e) {
+        errorBox.textContent = 'Erro de conexão';
+        errorBox.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+    }
+    return false;
+}
+
+async function handleLogout() {
+    try {
+        await fetch('/api/logout', { method: 'POST' });
+    } catch (e) {}
+    showLoginScreen();
+}
 
 // Navegação
 function showTab(tab) {
@@ -751,6 +1057,7 @@ function showTab(tab) {
     if (tab === 'pedidos') loadPedidos();
     if (tab === 'clientes') loadClientes();
     if (tab === 'orcamentos') loadOrcamentos();
+    if (tab === 'stock') loadMateriais();
 
     if (window.innerWidth <= 1024) {
         document.getElementById('sidebar').classList.remove('active');
@@ -773,9 +1080,18 @@ function showToast(message, type = 'info') {
 }
 
 // API Helpers
+function handleUnauthorized(res) {
+    if (res.status === 401) {
+        showLoginScreen();
+        return true;
+    }
+    return false;
+}
+
 async function apiGet(url) {
     try {
         const res = await fetch(url);
+        if (handleUnauthorized(res)) return [];
         return await res.json();
     } catch (e) {
         showToast('Erro de conexão', 'error');
@@ -790,6 +1106,7 @@ async function apiPost(url, data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        if (handleUnauthorized(res)) return { success: false };
         return await res.json();
     } catch (e) {
         showToast('Erro de conexão', 'error');
@@ -804,6 +1121,7 @@ async function apiPut(url, data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        if (handleUnauthorized(res)) return { success: false };
         return await res.json();
     } catch (e) {
         showToast('Erro de conexão', 'error');
@@ -814,6 +1132,7 @@ async function apiPut(url, data) {
 async function apiDelete(url) {
     try {
         const res = await fetch(url, { method: 'DELETE' });
+        if (handleUnauthorized(res)) return { success: false };
         return await res.json();
     } catch (e) {
         showToast('Erro de conexão', 'error');
@@ -879,10 +1198,12 @@ function renderPedidos() {
                             <div class="card-info-item"><span class="card-info-icon">📅</span>${formatDate(p.deadline) || 'Sem prazo'}</div>
                             <div class="card-info-item"><span class="card-info-icon">📍</span>${p.address || 'Sem endereço'}</div>
                             <div class="card-info-item"><span class="card-info-icon">📝</span>${p.quantity || 1} unidade(s)</div>
+                            ${p.pdf ? '<div class="card-info-item"><span class="card-info-icon">📄</span><a href="/static/uploads/' + p.pdf + '" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;" onclick="event.stopPropagation();">Ver PDF do desenho</a></div>' : ''}
                         </div>
                         <div class="card-footer">
                             <div class="card-price">€${parseFloat(p.price || 0).toFixed(2)}</div>
                             <div class="card-actions">
+                                ${(p.image || p.pdf) ? '<button class="card-btn" onclick="downloadPedidoFiles(' + p.id + ')" title="Baixar arquivos anexados">📥</button>' : ''}
                                 <button class="card-btn" onclick="editPedido(${p.id})" title="Editar">✏️</button>
                                 <button class="card-btn" onclick="deletePedido(${p.id})" title="Excluir">🗑️</button>
                             </div>
@@ -955,6 +1276,9 @@ function openPedidoModal() {
     document.getElementById('pedidoImagemPreview').style.display = 'none';
     document.getElementById('pedidoUploadText').style.display = 'block';
     document.getElementById('pedidoImagemUrl').value = '';
+    document.getElementById('pedidoPdfUploadText').style.display = 'block';
+    document.getElementById('pedidoPdfFileInfo').style.display = 'none';
+    document.getElementById('pedidoPdfUrl').value = '';
     document.getElementById('pedidoModal').classList.add('active');
 }
 
@@ -989,6 +1313,9 @@ async function editPedido(id) {
         document.getElementById('pedidoUploadText').style.display = 'block';
     }
 
+    document.getElementById('pedidoPdfUrl').value = p.pdf || '';
+    setPedidoPdfPreview(p.pdf);
+
     document.getElementById('pedidoModalTitle').textContent = 'Editar Pedido #' + p.id;
     document.getElementById('pedidoModal').classList.add('active');
 }
@@ -1007,7 +1334,8 @@ async function savePedido(e) {
         status: document.getElementById('pedidoStatus').value,
         address: document.getElementById('pedidoEndereco').value,
         notes: document.getElementById('pedidoObs').value,
-        image: document.getElementById('pedidoImagemUrl').value
+        image: document.getElementById('pedidoImagemUrl').value,
+        pdf: document.getElementById('pedidoPdfUrl').value
     };
 
     let res;
@@ -1037,6 +1365,33 @@ async function deletePedido(id) {
     }
 }
 
+function downloadPedidoFiles(id) {
+    const p = pedidos.find(x => x.id === id);
+    if (!p) return;
+
+    const files = [];
+    if (p.image) files.push('/static/uploads/' + p.image);
+    if (p.pdf) files.push('/static/uploads/' + p.pdf);
+
+    if (!files.length) {
+        showToast('Nenhum arquivo anexado a este pedido', 'info');
+        return;
+    }
+
+    files.forEach((url, i) => {
+        setTimeout(() => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = url.split('/').pop();
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }, i * 400);
+    });
+
+    showToast('Baixando ' + files.length + ' arquivo(s)...', 'success');
+}
+
 function previewPedidoImage(input) {
     if (input.files && input.files[0]) {
         const formData = new FormData();
@@ -1053,6 +1408,49 @@ function previewPedidoImage(input) {
                 }
             });
     }
+}
+
+function previewPedidoPdf(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            showToast('Selecione um arquivo PDF', 'error');
+            input.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/api/upload', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('pedidoPdfUrl').value = data.filename;
+                    setPedidoPdfPreview(data.filename);
+                    showToast('PDF anexado!', 'success');
+                }
+            });
+    }
+}
+
+function setPedidoPdfPreview(filename) {
+    const info = document.getElementById('pedidoPdfFileInfo');
+    const text = document.getElementById('pedidoPdfUploadText');
+    if (filename) {
+        document.getElementById('pedidoPdfFileName').textContent = filename;
+        info.style.display = 'flex';
+        text.style.display = 'none';
+    } else {
+        info.style.display = 'none';
+        text.style.display = 'block';
+    }
+}
+
+function removePedidoPdf() {
+    document.getElementById('pedidoPdfUrl').value = '';
+    document.getElementById('pedidoPdfInput').value = '';
+    setPedidoPdfPreview(null);
 }
 
 // Sugestões
@@ -1348,6 +1746,156 @@ function usarOrcamento(id) {
     document.getElementById('pedidoValor').value = o.price || '';
     document.getElementById('pedidoModalTitle').textContent = 'Novo Pedido (Orçamento)';
     document.getElementById('pedidoModal').classList.add('active');
+}
+
+// Materiais (Stock)
+const CATEGORIA_LABELS = { resina: 'Resina', adesivo: 'Adesivo', folha: 'Folha', outro: 'Outro' };
+
+async function loadMateriais() {
+    const categoria = document.getElementById('filterCategoria')?.value || '';
+    let url = '/api/materiais';
+    if (categoria) url += '?categoria=' + encodeURIComponent(categoria);
+
+    materiais = await apiGet(url);
+    renderMateriais();
+    updateMateriaisStats();
+}
+
+function renderMateriais() {
+    const search = (document.getElementById('searchMateriais')?.value || '').toLowerCase();
+    const body = document.getElementById('materiaisTableBody');
+    const empty = document.getElementById('materiaisEmpty');
+
+    let filtrados = materiais;
+    if (search) {
+        filtrados = filtrados.filter(m =>
+            (m.nome || '').toLowerCase().includes(search) ||
+            (m.fornecedor || '').toLowerCase().includes(search)
+        );
+    }
+
+    if (!filtrados.length) {
+        body.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    body.innerHTML = filtrados.map(m => `
+        <tr class="${m.stock_baixo ? 'low-stock-row' : ''}">
+            <td>${m.stock_baixo ? '<span class="low-stock-dot"></span>' : ''}${m.nome}</td>
+            <td>${CATEGORIA_LABELS[m.categoria] || m.categoria || '—'}</td>
+            <td>${formatNumber(m.quantidade_atual)} ${m.unidade || ''}</td>
+            <td>${formatNumber(m.quantidade_minima)} ${m.unidade || ''}</td>
+            <td>€${parseFloat(m.preco_unitario || 0).toFixed(2)}</td>
+            <td>${m.fornecedor || '—'}</td>
+            <td>${m.stock_baixo ? '<span class="low-stock-badge">Stock Baixo</span>' : '<span class="ok-stock-badge">OK</span>'}</td>
+            <td>${formatDate(m.data_atualizacao)}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="card-btn" onclick="editMaterial(${m.id})" title="Editar">✏️</button>
+                    <button class="card-btn" onclick="deleteMaterial(${m.id})" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatNumber(n) {
+    const num = parseFloat(n || 0);
+    return num % 1 === 0 ? num.toString() : num.toFixed(2);
+}
+
+function updateMateriaisStats() {
+    const total = materiais.length;
+    const baixo = materiais.filter(m => m.stock_baixo).length;
+    const valorTotal = materiais.reduce((sum, m) => sum + (parseFloat(m.quantidade_atual || 0) * parseFloat(m.preco_unitario || 0)), 0);
+
+    document.getElementById('statMateriaisTotal').textContent = total;
+    document.getElementById('statMateriaisBaixo').textContent = baixo;
+    document.getElementById('statMateriaisValor').textContent = '€' + valorTotal.toFixed(2);
+
+    const badge = document.getElementById('badgeStockBaixo');
+    if (baixo > 0) {
+        badge.textContent = baixo;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function openMaterialModal() {
+    editingMaterial = null;
+    document.getElementById('materialForm').reset();
+    document.getElementById('materialModalTitle').textContent = 'Novo Material';
+    document.getElementById('materialModal').classList.add('active');
+}
+
+function closeMaterialModal() {
+    document.getElementById('materialModal').classList.remove('active');
+    editingMaterial = null;
+}
+
+function editMaterial(id) {
+    const m = materiais.find(x => x.id === id);
+    if (!m) return;
+    editingMaterial = id;
+
+    document.getElementById('materialId').value = m.id;
+    document.getElementById('materialNome').value = m.nome;
+    document.getElementById('materialCategoria').value = m.categoria || 'outro';
+    document.getElementById('materialQuantidadeAtual').value = m.quantidade_atual || 0;
+    document.getElementById('materialQuantidadeMinima').value = m.quantidade_minima || 0;
+    document.getElementById('materialUnidade').value = m.unidade || 'unidades';
+    document.getElementById('materialPreco').value = m.preco_unitario || 0;
+    document.getElementById('materialFornecedor').value = m.fornecedor || '';
+    document.getElementById('materialNotas').value = m.notas || '';
+
+    document.getElementById('materialModalTitle').textContent = 'Editar Material';
+    document.getElementById('materialModal').classList.add('active');
+}
+
+async function saveMaterial(e) {
+    e.preventDefault();
+
+    const data = {
+        nome: document.getElementById('materialNome').value,
+        categoria: document.getElementById('materialCategoria').value,
+        quantidade_atual: parseFloat(document.getElementById('materialQuantidadeAtual').value) || 0,
+        quantidade_minima: parseFloat(document.getElementById('materialQuantidadeMinima').value) || 0,
+        unidade: document.getElementById('materialUnidade').value,
+        preco_unitario: parseFloat(document.getElementById('materialPreco').value) || 0,
+        fornecedor: document.getElementById('materialFornecedor').value,
+        notas: document.getElementById('materialNotas').value
+    };
+
+    let res;
+    if (editingMaterial) {
+        res = await apiPut('/api/materiais/' + editingMaterial, data);
+    } else {
+        res = await apiPost('/api/materiais', data);
+    }
+
+    if (res.success) {
+        showToast(editingMaterial ? 'Material atualizado!' : 'Material adicionado!', 'success');
+        closeMaterialModal();
+        loadMateriais();
+    } else {
+        showToast('Erro ao salvar material', 'error');
+    }
+}
+
+async function deleteMaterial(id) {
+    const m = materiais.find(x => x.id === id);
+    if (!m) return;
+    if (!confirm('Tem certeza que deseja excluir o material "' + m.nome + '"?')) return;
+    const res = await apiDelete('/api/materiais/' + id);
+    if (res.success) {
+        showToast('Material excluído', 'success');
+        loadMateriais();
+    } else {
+        showToast('Erro ao excluir material', 'error');
+    }
 }
 
 // Estatísticas

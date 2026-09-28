@@ -2,19 +2,72 @@ import os
 import sqlite3
 import json
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+from flask_session import Session
 
 app = Flask(__name__)
-CORS(app)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, "pedidos.db")
+
+# Pasta persistente (ex: volume do Railway montado em /data).
+# Só é usada em sistemas POSIX (Linux/containers); no Windows (dev local) usa-se BASE_DIR,
+# a menos que DATA_DIR seja definida explicitamente.
+DATA_DIR = os.environ.get('DATA_DIR') or ('/data' if os.name == 'posix' else BASE_DIR)
+try:
+    os.makedirs(DATA_DIR, exist_ok=True)
+except OSError:
+    DATA_DIR = BASE_DIR
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_PATH = os.path.join(DATA_DIR, "pedidos.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# Sessão / autenticação
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'elements-troque-esta-chave-em-producao')
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_FILE_DIR'] = os.path.join(DATA_DIR, 'flask_session')
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+Session(app)
+
+CORS(app, supports_credentials=True)
+
+APP_USERNAME = os.environ.get('APP_USERNAME', 'admin')
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'admin')
+
+PUBLIC_API_ROUTES = {'/api/login', '/api/check-auth'}
+
+@app.before_request
+def require_login():
+    if request.path.startswith('/api/') and request.path not in PUBLIC_API_ROUTES:
+        if not session.get('logged_in'):
+            return jsonify({"error": "unauthorized"}), 401
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    data = request.get_json(silent=True) or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+    if username == APP_USERNAME and password == APP_PASSWORD:
+        session.permanent = True
+        session['logged_in'] = True
+        session['username'] = username
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Credenciais inválidas"}), 401
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.clear()
+    return jsonify({"success": True})
+
+@app.route("/api/check-auth")
+def api_check_auth():
+    return jsonify({"authenticated": bool(session.get('logged_in'))})
 
 def get_db():
     return sqlite3.connect(DB_PATH)
@@ -42,7 +95,8 @@ def init_db():
             notes TEXT,
             image TEXT,
             status TEXT DEFAULT 'Pendente',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            pdf TEXT
         )
     """)
 
@@ -59,7 +113,8 @@ def init_db():
         ('notes', 'TEXT'),
         ('image', 'TEXT'),
         ('status', 'TEXT DEFAULT "Pendente"'),
-        ('created_at', 'TEXT DEFAULT CURRENT_TIMESTAMP')
+        ('created_at', 'TEXT DEFAULT CURRENT_TIMESTAMP'),
+        ('pdf', 'TEXT')
     ]
 
     for col, coltype in colunas_necessarias:
@@ -92,6 +147,22 @@ def init_db():
         )
     """)
 
+    # Tabela materiais (stock)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS materiais (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            categoria TEXT,
+            quantidade_atual REAL DEFAULT 0,
+            quantidade_minima REAL DEFAULT 0,
+            unidade TEXT,
+            preco_unitario REAL DEFAULT 0,
+            fornecedor TEXT,
+            notas TEXT,
+            data_atualizacao TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("[DEBUG] Banco de dados inicializado com sucesso!")
@@ -110,13 +181,13 @@ def api_pedidos():
     if request.method == "POST":
         data = request.get_json()
         cursor.execute("""
-            INSERT INTO pedidos (clientName, clientPhone, product, size, quantity, price, deadline, address, notes, image, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO pedidos (clientName, clientPhone, product, size, quantity, price, deadline, address, notes, image, status, pdf)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get('clientName', ''), data.get('clientPhone', ''), data.get('product', ''),
             data.get('size', ''), data.get('quantity', 1), data.get('price', 0),
             data.get('deadline', ''), data.get('address', ''), data.get('notes', ''),
-            data.get('image', ''), data.get('status', 'Pendente')
+            data.get('image', ''), data.get('status', 'Pendente'), data.get('pdf', '')
         ))
         conn.commit()
         pedido_id = cursor.lastrowid
@@ -158,7 +229,7 @@ def api_pedidos():
             "product": row[3], "size": row[4], "quantity": row[5],
             "price": row[6], "deadline": row[7], "address": row[8],
             "notes": row[9], "image": row[10], "status": row[11],
-            "created_at": row[12]
+            "created_at": row[12], "pdf": row[13]
         })
     conn.close()
     return jsonify(pedidos)
@@ -171,14 +242,14 @@ def api_pedido(id):
     if request.method == "PUT":
         data = request.get_json()
         cursor.execute("""
-            UPDATE pedidos SET clientName=?, clientPhone=?, product=?, size=?, quantity=?, 
-            price=?, deadline=?, address=?, notes=?, image=?, status=?
+            UPDATE pedidos SET clientName=?, clientPhone=?, product=?, size=?, quantity=?,
+            price=?, deadline=?, address=?, notes=?, image=?, status=?, pdf=?
             WHERE id=?
         """, (
             data.get('clientName'), data.get('clientPhone'), data.get('product'),
             data.get('size'), data.get('quantity'), data.get('price'),
             data.get('deadline'), data.get('address'), data.get('notes'),
-            data.get('image'), data.get('status'), id
+            data.get('image'), data.get('status'), data.get('pdf'), id
         ))
         conn.commit()
         conn.close()
@@ -268,7 +339,7 @@ def api_cliente_historico(name):
             "product": row[3], "size": row[4], "quantity": row[5],
             "price": row[6], "deadline": row[7], "address": row[8],
             "notes": row[9], "image": row[10], "status": row[11],
-            "created_at": row[12]
+            "created_at": row[12], "pdf": row[13]
         })
 
     total_pedidos = len(pedidos)
@@ -335,6 +406,80 @@ def api_orcamentos():
     conn.close()
     return jsonify(orcamentos)
 
+def row_to_material(row):
+    quantidade_atual = row[3] or 0
+    quantidade_minima = row[4] or 0
+    return {
+        "id": row[0], "nome": row[1], "categoria": row[2],
+        "quantidade_atual": quantidade_atual, "quantidade_minima": quantidade_minima,
+        "unidade": row[5], "preco_unitario": row[6], "fornecedor": row[7],
+        "notas": row[8], "data_atualizacao": row[9],
+        "stock_baixo": quantidade_atual <= quantidade_minima
+    }
+
+@app.route("/api/materiais", methods=["GET", "POST"])
+def api_materiais():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        cursor.execute("""
+            INSERT INTO materiais (nome, categoria, quantidade_atual, quantidade_minima, unidade, preco_unitario, fornecedor, notas, data_atualizacao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (
+            data.get('nome', ''), data.get('categoria', ''),
+            data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
+            data.get('unidade', ''), data.get('preco_unitario', 0),
+            data.get('fornecedor', ''), data.get('notas', '')
+        ))
+        conn.commit()
+        material_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": material_id})
+
+    categoria_filter = request.args.get('categoria')
+
+    query = "SELECT * FROM materiais WHERE 1=1"
+    params = []
+    if categoria_filter:
+        query += " AND categoria = ?"
+        params.append(categoria_filter)
+    query += " ORDER BY nome ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    materiais = [row_to_material(row) for row in rows]
+    conn.close()
+    return jsonify(materiais)
+
+@app.route("/api/materiais/<int:id>", methods=["PUT", "DELETE"])
+def api_material(id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        cursor.execute("""
+            UPDATE materiais SET nome=?, categoria=?, quantidade_atual=?, quantidade_minima=?,
+            unidade=?, preco_unitario=?, fornecedor=?, notas=?, data_atualizacao=CURRENT_TIMESTAMP
+            WHERE id=?
+        """, (
+            data.get('nome'), data.get('categoria'),
+            data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
+            data.get('unidade'), data.get('preco_unitario', 0),
+            data.get('fornecedor'), data.get('notas'), id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+    elif request.method == "DELETE":
+        cursor.execute("DELETE FROM materiais WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
     if 'file' not in request.files:
@@ -385,17 +530,18 @@ def import_data():
     if 'pedidos' in data:
         for p in data['pedidos']:
             cursor.execute("""
-                INSERT INTO pedidos (id, clientName, clientPhone, product, size, quantity, price, deadline, address, notes, image, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pedidos (id, clientName, clientPhone, product, size, quantity, price, deadline, address, notes, image, status, created_at, pdf)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                 clientName=excluded.clientName, clientPhone=excluded.clientPhone,
                 product=excluded.product, size=excluded.size, quantity=excluded.quantity,
                 price=excluded.price, deadline=excluded.deadline, address=excluded.address,
-                notes=excluded.notes, image=excluded.image, status=excluded.status
+                notes=excluded.notes, image=excluded.image, status=excluded.status, pdf=excluded.pdf
             """, (
                 p.get('id'), p.get('clientName'), p.get('clientPhone'), p.get('product'),
                 p.get('size'), p.get('quantity'), p.get('price'), p.get('deadline'),
-                p.get('address'), p.get('notes'), p.get('image'), p.get('status'), p.get('created_at')
+                p.get('address'), p.get('notes'), p.get('image'), p.get('status'), p.get('created_at'),
+                p.get('pdf')
             ))
 
     if 'clientes' in data:
@@ -413,10 +559,11 @@ def import_data():
     return jsonify({"success": True})
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     print("="*60)
     print("SERVIDOR ELEMENTS PEDIDOS INICIADO!")
-    print("Acesse no seu navegador: http://localhost:5000")
+    print(f"Acesse no seu navegador: http://localhost:{port}")
     print("Para acessar de outro PC na mesma rede, use o IP deste computador")
-    print("Exemplo: http://192.168.1.116:5000")
+    print(f"Exemplo: http://192.168.1.116:{port}")
     print("="*60)
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)

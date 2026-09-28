@@ -163,6 +163,51 @@ def init_db():
         )
     """)
 
+    # Tabela fornecedores
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fornecedores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT,
+            email TEXT,
+            website TEXT,
+            categorias TEXT,
+            notas TEXT,
+            data_criacao TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Tabela compras (histórico de compras de materiais)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS compras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            material_id INTEGER NOT NULL,
+            fornecedor_id INTEGER,
+            data_compra TEXT NOT NULL,
+            quantidade REAL NOT NULL,
+            unidade TEXT,
+            preco_unitario REAL NOT NULL,
+            preco_total REAL,
+            notas TEXT,
+            data_criacao TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (material_id) REFERENCES materiais(id),
+            FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id)
+        )
+    """)
+
+    # Migração: adicionar colunas novas à tabela materiais (fornecedor associado + preço mais recente)
+    materiais_colunas_novas = [
+        ('fornecedor_id', 'INTEGER REFERENCES fornecedores(id)'),
+        ('preco_atual', 'REAL')
+    ]
+    for col, coltype in materiais_colunas_novas:
+        if not column_exists(cursor, 'materiais', col):
+            try:
+                cursor.execute(f"ALTER TABLE materiais ADD COLUMN {col} {coltype}")
+                print(f"[MIGRACAO] Coluna '{col}' adicionada a materiais")
+            except Exception as e:
+                print(f"[MIGRACAO] Erro ao adicionar '{col}': {e}")
+
     conn.commit()
     conn.close()
     print("[DEBUG] Banco de dados inicializado com sucesso!")
@@ -414,6 +459,7 @@ def row_to_material(row):
         "quantidade_atual": quantidade_atual, "quantidade_minima": quantidade_minima,
         "unidade": row[5], "preco_unitario": row[6], "fornecedor": row[7],
         "notas": row[8], "data_atualizacao": row[9],
+        "fornecedor_id": row[10], "preco_atual": row[11], "fornecedor_nome": row[12],
         "stock_baixo": quantidade_atual <= quantidade_minima
     }
 
@@ -425,13 +471,14 @@ def api_materiais():
     if request.method == "POST":
         data = request.get_json()
         cursor.execute("""
-            INSERT INTO materiais (nome, categoria, quantidade_atual, quantidade_minima, unidade, preco_unitario, fornecedor, notas, data_atualizacao)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO materiais (nome, categoria, quantidade_atual, quantidade_minima, unidade, preco_unitario, fornecedor, notas, fornecedor_id, preco_atual, data_atualizacao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (
             data.get('nome', ''), data.get('categoria', ''),
             data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
             data.get('unidade', ''), data.get('preco_unitario', 0),
-            data.get('fornecedor', ''), data.get('notas', '')
+            data.get('fornecedor', ''), data.get('notas', ''),
+            data.get('fornecedor_id'), data.get('preco_atual')
         ))
         conn.commit()
         material_id = cursor.lastrowid
@@ -440,12 +487,19 @@ def api_materiais():
 
     categoria_filter = request.args.get('categoria')
 
-    query = "SELECT * FROM materiais WHERE 1=1"
+    query = """
+        SELECT m.id, m.nome, m.categoria, m.quantidade_atual, m.quantidade_minima, m.unidade,
+               m.preco_unitario, m.fornecedor, m.notas, m.data_atualizacao, m.fornecedor_id, m.preco_atual,
+               f.nome as fornecedor_nome
+        FROM materiais m
+        LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
+        WHERE 1=1
+    """
     params = []
     if categoria_filter:
-        query += " AND categoria = ?"
+        query += " AND m.categoria = ?"
         params.append(categoria_filter)
-    query += " ORDER BY nome ASC"
+    query += " ORDER BY m.categoria, m.nome ASC"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -462,13 +516,14 @@ def api_material(id):
         data = request.get_json()
         cursor.execute("""
             UPDATE materiais SET nome=?, categoria=?, quantidade_atual=?, quantidade_minima=?,
-            unidade=?, preco_unitario=?, fornecedor=?, notas=?, data_atualizacao=CURRENT_TIMESTAMP
+            unidade=?, preco_unitario=?, fornecedor=?, notas=?, fornecedor_id=?, preco_atual=?, data_atualizacao=CURRENT_TIMESTAMP
             WHERE id=?
         """, (
             data.get('nome'), data.get('categoria'),
             data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
             data.get('unidade'), data.get('preco_unitario', 0),
-            data.get('fornecedor'), data.get('notas'), id
+            data.get('fornecedor'), data.get('notas'),
+            data.get('fornecedor_id'), data.get('preco_atual'), id
         ))
         conn.commit()
         conn.close()
@@ -479,6 +534,124 @@ def api_material(id):
         conn.commit()
         conn.close()
         return jsonify({"success": True})
+
+@app.route("/api/fornecedores", methods=["GET", "POST"])
+def api_fornecedores():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        cursor.execute("""
+            INSERT INTO fornecedores (nome, telefone, email, website, categorias, notas)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            data.get('nome', ''), data.get('telefone', ''), data.get('email', ''),
+            data.get('website', ''), data.get('categorias', ''), data.get('notas', '')
+        ))
+        conn.commit()
+        fornecedor_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": fornecedor_id})
+
+    cursor.execute("SELECT id, nome, telefone, email, website, categorias, notas, data_criacao FROM fornecedores ORDER BY nome")
+    rows = cursor.fetchall()
+    fornecedores = [{
+        "id": r[0], "nome": r[1], "telefone": r[2], "email": r[3],
+        "website": r[4], "categorias": r[5], "notas": r[6], "data_criacao": r[7]
+    } for r in rows]
+    conn.close()
+    return jsonify(fornecedores)
+
+@app.route("/api/fornecedores/<int:id>", methods=["PUT", "DELETE"])
+def api_fornecedor(id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        cursor.execute("""
+            UPDATE fornecedores SET nome=?, telefone=?, email=?, website=?, categorias=?, notas=?
+            WHERE id=?
+        """, (
+            data.get('nome', ''), data.get('telefone', ''), data.get('email', ''),
+            data.get('website', ''), data.get('categorias', ''), data.get('notas', ''), id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+    elif request.method == "DELETE":
+        cursor.execute("DELETE FROM fornecedores WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+@app.route("/api/compras", methods=["GET", "POST"])
+def api_compras():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        quantidade = float(data.get('quantidade', 0) or 0)
+        preco_unitario = float(data.get('preco_unitario', 0) or 0)
+        preco_total = quantidade * preco_unitario
+        cursor.execute("""
+            INSERT INTO compras (material_id, fornecedor_id, data_compra, quantidade, unidade, preco_unitario, preco_total, notas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data.get('material_id'), data.get('fornecedor_id'), data.get('data_compra'),
+            quantidade, data.get('unidade', ''), preco_unitario, preco_total, data.get('notas', '')
+        ))
+        # Actualiza o preço actual e o fornecedor do material com os dados desta compra
+        cursor.execute("UPDATE materiais SET preco_atual=?, fornecedor_id=? WHERE id=?",
+                       (preco_unitario, data.get('fornecedor_id'), data.get('material_id')))
+        conn.commit()
+        compra_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": compra_id})
+
+    material_id = request.args.get('material_id')
+    fornecedor_id = request.args.get('fornecedor_id')
+
+    query = """
+        SELECT c.id, c.material_id, c.fornecedor_id, c.data_compra, c.quantidade, c.unidade,
+               c.preco_unitario, c.preco_total, c.notas, c.data_criacao,
+               m.nome as material_nome, m.unidade as material_unidade, f.nome as fornecedor_nome
+        FROM compras c
+        LEFT JOIN materiais m ON c.material_id = m.id
+        LEFT JOIN fornecedores f ON c.fornecedor_id = f.id
+        WHERE 1=1
+    """
+    params = []
+    if material_id:
+        query += " AND c.material_id = ?"
+        params.append(material_id)
+    if fornecedor_id:
+        query += " AND c.fornecedor_id = ?"
+        params.append(fornecedor_id)
+    query += " ORDER BY c.data_compra DESC, c.id DESC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    compras = [{
+        "id": r[0], "material_id": r[1], "fornecedor_id": r[2], "data_compra": r[3],
+        "quantidade": r[4], "unidade": r[5], "preco_unitario": r[6], "preco_total": r[7],
+        "notas": r[8], "data_criacao": r[9], "material_nome": r[10], "material_unidade": r[11],
+        "fornecedor_nome": r[12]
+    } for r in rows]
+    conn.close()
+    return jsonify(compras)
+
+@app.route("/api/compras/<int:id>", methods=["DELETE"])
+def api_compra(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM compras WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():

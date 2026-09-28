@@ -527,6 +527,10 @@
                 <span>Stock</span>
                 <span class="nav-badge" id="badgeStockBaixo" style="display:none;background:var(--danger);color:white;">0</span>
             </div>
+            <div class="nav-item" onclick="showTab('fornecedores')" data-tab="fornecedores">
+                <span class="nav-icon">🏭</span>
+                <span>Fornecedores</span>
+            </div>
             <div class="nav-item" onclick="showTab('calculadora')" data-tab="calculadora">
                 <span class="nav-icon">🧮</span>
                 <span>Calculadora</span>
@@ -714,6 +718,7 @@
                                 <th>Mínimo</th>
                                 <th>Preço Unit.</th>
                                 <th>Fornecedor</th>
+                                <th>Preço Atual</th>
                                 <th>Status</th>
                                 <th>Atualizado</th>
                                 <th></th>
@@ -726,6 +731,56 @@
                     <div class="empty-state-icon">🧱</div>
                     <h3>Nenhum material cadastrado</h3>
                     <p>Clique em "Novo Material" para começar a controlar seu stock.</p>
+                </div>
+            </div>
+
+            <!-- Fornecedores -->
+            <div id="tab-fornecedores" class="tab-content" style="display:none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-title-icon">🏭</div>
+                        Fornecedores
+                    </div>
+                    <button class="btn btn-primary" onclick="openFornecedorModal()">➕ Novo Fornecedor</button>
+                </div>
+
+                <div class="cards-grid" id="fornecedoresGrid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); margin-bottom:28px;"></div>
+                <div class="empty-state" id="fornecedoresEmpty" style="display:none;">
+                    <div class="empty-state-icon">🏭</div>
+                    <h3>Nenhum fornecedor cadastrado</h3>
+                    <p>Clique em "Novo Fornecedor" para começar.</p>
+                </div>
+
+                <div class="section-header" style="margin-top:8px;">
+                    <div class="section-title" style="font-size:18px;">
+                        <div class="section-title-icon">📋</div>
+                        Histórico de Compras
+                    </div>
+                    <select class="filter-select" id="filtroFornecedorHistorico" onchange="loadHistoricoCompras()">
+                        <option value="">Todos os Fornecedores</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Material</th>
+                                <th>Fornecedor</th>
+                                <th>Quantidade</th>
+                                <th>Preço Unit.</th>
+                                <th>Total</th>
+                                <th>Notas</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="comprasTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="comprasEmpty" style="display:none;">
+                    <div class="empty-state-icon">📋</div>
+                    <h3>Sem compras registadas</h3>
+                    <p>Regista uma compra a partir do Stock para veres o histórico aqui.</p>
                 </div>
             </div>
 
@@ -982,6 +1037,18 @@
                         <label class="form-label">Fornecedor</label>
                         <input type="text" class="form-input" id="materialFornecedor" placeholder="Nome do fornecedor">
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fornecedor Registado</label>
+                            <select class="form-select" id="materialFornecedorId">
+                                <option value="">— Sem fornecedor —</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Preço Atual (€)</label>
+                            <input type="number" class="form-input" id="materialPrecoAtual" step="0.01" min="0" placeholder="Preço mais recente">
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Notas</label>
                         <textarea class="form-textarea" id="materialNotas" placeholder="Observações adicionais..."></textarea>
@@ -989,6 +1056,111 @@
                     <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
                         <button type="button" class="btn btn-secondary" onclick="closeMaterialModal()">Cancelar</button>
                         <button type="submit" class="btn btn-primary">💾 Salvar Material</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fornecedor -->
+    <div class="modal-overlay" id="fornecedorModal">
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title" id="fornecedorModalTitle">Novo Fornecedor</div>
+                <button class="modal-close" onclick="closeFornecedorModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="fornecedorForm" onsubmit="saveFornecedor(event)">
+                    <input type="hidden" id="fornecedorId">
+                    <div class="form-group">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-input" id="fornecedorNome" required placeholder="Nome do fornecedor">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Telefone</label>
+                            <input type="tel" class="form-input" id="fornecedorTelefone" placeholder="+351 ...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="fornecedorEmail" placeholder="email@exemplo.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Website / Link de Encomenda</label>
+                        <input type="text" class="form-input" id="fornecedorWebsite" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categorias de Materiais</label>
+                        <input type="text" class="form-input" id="fornecedorCategorias" placeholder="Ex: resina, tinteiros, papel">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-textarea" id="fornecedorNotas" placeholder="Prazo de entrega, condições, etc."></textarea>
+                    </div>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeFornecedorModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Salvar Fornecedor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registar Compra -->
+    <div class="modal-overlay" id="compraModal">
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title">📦 Registar Compra</div>
+                <button class="modal-close" onclick="closeCompraModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="compraForm" onsubmit="saveCompra(event)">
+                    <input type="hidden" id="compraMaterialId">
+                    <div class="form-group">
+                        <label class="form-label">Material</label>
+                        <input type="text" class="form-input" id="compraMaterialNome" disabled style="opacity:0.7;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fornecedor</label>
+                        <select class="form-select" id="compraFornecedorId">
+                            <option value="">— Sem fornecedor —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data da Compra *</label>
+                        <input type="date" class="form-input" id="compraData" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Quantidade *</label>
+                            <input type="number" class="form-input" id="compraQuantidade" step="0.01" min="0" required oninput="calcCompraTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unidade</label>
+                            <input type="text" class="form-input" id="compraUnidade" placeholder="g, ml, un, m...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Preço Unitário (€) *</label>
+                            <input type="number" class="form-input" id="compraPrecoUnit" step="0.01" min="0" required oninput="calcCompraTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Total (€)</label>
+                            <input type="text" class="form-input" id="compraTotal" disabled style="opacity:0.7;color:var(--gold);">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-textarea" id="compraNotas" placeholder="Referência, lote, etc."></textarea>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-bottom:8px;">
+                        ℹ️ O preço atual do material será atualizado automaticamente com este valor.
+                    </div>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeCompraModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Registar Compra</button>
                     </div>
                 </form>
             </div>
@@ -1023,6 +1195,8 @@ let materiais = [];
 let editingPedido = null;
 let editingMaterial = null;
 let themeConfig = JSON.parse(localStorage.getItem('elements_theme') || '{}');
+let fornecedores = [];
+let editingFornecedor = null;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -1057,6 +1231,7 @@ function showApp() {
     loadClientes();
     loadOrcamentos();
     loadMateriais();
+    loadFornecedores();
     updateStats();
 }
 
@@ -1111,6 +1286,7 @@ function showTab(tab) {
     if (tab === 'clientes') loadClientes();
     if (tab === 'orcamentos') loadOrcamentos();
     if (tab === 'stock') loadMateriais();
+    if (tab === 'fornecedores') { loadFornecedores(); loadHistoricoCompras(); }
 
     if (window.innerWidth <= 1024) {
         document.getElementById('sidebar').classList.remove('active');
@@ -1841,11 +2017,13 @@ function renderMateriais() {
             <td>${formatNumber(m.quantidade_atual)} ${m.unidade || ''}</td>
             <td>${formatNumber(m.quantidade_minima)} ${m.unidade || ''}</td>
             <td>€${parseFloat(m.preco_unitario || 0).toFixed(2)}</td>
-            <td>${m.fornecedor || '—'}</td>
+            <td>${m.fornecedor_nome || m.fornecedor || '—'}</td>
+            <td>${m.preco_atual != null ? '€' + parseFloat(m.preco_atual).toFixed(2) : '—'}</td>
             <td>${m.stock_baixo ? '<span class="low-stock-badge">Stock Baixo</span>' : '<span class="ok-stock-badge">OK</span>'}</td>
             <td>${formatDate(m.data_atualizacao)}</td>
             <td>
                 <div class="table-actions">
+                    <button class="card-btn" onclick='openCompraModal(${m.id}, ${JSON.stringify(m.nome)}, ${JSON.stringify(m.unidade || "")}, ${m.fornecedor_id != null ? m.fornecedor_id : 'null'})' title="Registar Compra">📦</button>
                     <button class="card-btn" onclick="editMaterial(${m.id})" title="Editar">✏️</button>
                     <button class="card-btn" onclick="deleteMaterial(${m.id})" title="Excluir">🗑️</button>
                 </div>
@@ -1884,6 +2062,22 @@ function openMaterialModal() {
     document.getElementById('materialModal').classList.add('active');
 }
 
+function updateFornecedorSelects() {
+    const opts = '<option value="">— Sem fornecedor —</option>' +
+        fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+    const selMat = document.getElementById('materialFornecedorId');
+    if (selMat) { const cur = selMat.value; selMat.innerHTML = opts; selMat.value = cur; }
+    const selCompra = document.getElementById('compraFornecedorId');
+    if (selCompra) { const cur = selCompra.value; selCompra.innerHTML = opts; selCompra.value = cur; }
+    const selFiltro = document.getElementById('filtroFornecedorHistorico');
+    if (selFiltro) {
+        const cur = selFiltro.value;
+        selFiltro.innerHTML = '<option value="">Todos os Fornecedores</option>' +
+            fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+        selFiltro.value = cur;
+    }
+}
+
 function closeMaterialModal() {
     document.getElementById('materialModal').classList.remove('active');
     editingMaterial = null;
@@ -1902,6 +2096,8 @@ function editMaterial(id) {
     document.getElementById('materialUnidade').value = m.unidade || 'unidades';
     document.getElementById('materialPreco').value = m.preco_unitario || 0;
     document.getElementById('materialFornecedor').value = m.fornecedor || '';
+    document.getElementById('materialFornecedorId').value = m.fornecedor_id || '';
+    document.getElementById('materialPrecoAtual').value = m.preco_atual != null ? m.preco_atual : '';
     document.getElementById('materialNotas').value = m.notas || '';
 
     document.getElementById('materialModalTitle').textContent = 'Editar Material';
@@ -1919,6 +2115,8 @@ async function saveMaterial(e) {
         unidade: document.getElementById('materialUnidade').value,
         preco_unitario: parseFloat(document.getElementById('materialPreco').value) || 0,
         fornecedor: document.getElementById('materialFornecedor').value,
+        fornecedor_id: document.getElementById('materialFornecedorId').value || null,
+        preco_atual: document.getElementById('materialPrecoAtual').value ? parseFloat(document.getElementById('materialPrecoAtual').value) : null,
         notas: document.getElementById('materialNotas').value
     };
 
@@ -1948,6 +2146,207 @@ async function deleteMaterial(id) {
         loadMateriais();
     } else {
         showToast('Erro ao excluir material', 'error');
+    }
+}
+
+// Fornecedores
+async function loadFornecedores() {
+    fornecedores = await apiGet('/api/fornecedores');
+    renderFornecedoresGrid();
+    updateFornecedorSelects();
+}
+
+function renderFornecedoresGrid() {
+    const grid = document.getElementById('fornecedoresGrid');
+    const empty = document.getElementById('fornecedoresEmpty');
+    if (!grid) return;
+
+    if (!fornecedores.length) {
+        grid.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    grid.innerHTML = fornecedores.map(f => `
+        <div class="stat-card" style="padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                <div style="font-size:16px;font-weight:600;color:var(--gold);">${f.nome}</div>
+                <div class="table-actions">
+                    <button class="card-btn" onclick="editFornecedor(${f.id})" title="Editar">✏️</button>
+                    <button class="card-btn" onclick="deleteFornecedor(${f.id})" title="Excluir">🗑️</button>
+                </div>
+            </div>
+            ${f.telefone ? `<div style="font-size:13px;color:var(--text-light);margin-bottom:4px;">📞 ${f.telefone}</div>` : ''}
+            ${f.email ? `<div style="font-size:13px;color:var(--text-light);margin-bottom:4px;">✉️ <a href="mailto:${f.email}" style="color:var(--gold-light);">${f.email}</a></div>` : ''}
+            ${f.website ? `<div style="font-size:13px;color:var(--text-light);margin-bottom:4px;">🌐 <a href="${f.website}" target="_blank" rel="noopener" style="color:var(--gold-light);">${f.website}</a></div>` : ''}
+            ${f.categorias ? `<div style="font-size:12px;color:var(--text-light);margin-top:8px;">📦 ${f.categorias}</div>` : ''}
+            ${f.notas ? `<div style="font-size:12px;color:var(--text-light);margin-top:6px;border-top:1px solid var(--border);padding-top:8px;">${f.notas}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function openFornecedorModal() {
+    editingFornecedor = null;
+    document.getElementById('fornecedorForm').reset();
+    document.getElementById('fornecedorModalTitle').textContent = 'Novo Fornecedor';
+    document.getElementById('fornecedorModal').classList.add('active');
+}
+
+function closeFornecedorModal() {
+    document.getElementById('fornecedorModal').classList.remove('active');
+    editingFornecedor = null;
+}
+
+function editFornecedor(id) {
+    const f = fornecedores.find(x => x.id === id);
+    if (!f) return;
+    editingFornecedor = id;
+
+    document.getElementById('fornecedorId').value = f.id;
+    document.getElementById('fornecedorNome').value = f.nome;
+    document.getElementById('fornecedorTelefone').value = f.telefone || '';
+    document.getElementById('fornecedorEmail').value = f.email || '';
+    document.getElementById('fornecedorWebsite').value = f.website || '';
+    document.getElementById('fornecedorCategorias').value = f.categorias || '';
+    document.getElementById('fornecedorNotas').value = f.notas || '';
+
+    document.getElementById('fornecedorModalTitle').textContent = 'Editar Fornecedor';
+    document.getElementById('fornecedorModal').classList.add('active');
+}
+
+async function saveFornecedor(e) {
+    e.preventDefault();
+
+    const data = {
+        nome: document.getElementById('fornecedorNome').value,
+        telefone: document.getElementById('fornecedorTelefone').value,
+        email: document.getElementById('fornecedorEmail').value,
+        website: document.getElementById('fornecedorWebsite').value,
+        categorias: document.getElementById('fornecedorCategorias').value,
+        notas: document.getElementById('fornecedorNotas').value
+    };
+
+    let res;
+    if (editingFornecedor) {
+        res = await apiPut('/api/fornecedores/' + editingFornecedor, data);
+    } else {
+        res = await apiPost('/api/fornecedores', data);
+    }
+
+    if (res.success) {
+        showToast(editingFornecedor ? 'Fornecedor atualizado!' : 'Fornecedor adicionado!', 'success');
+        closeFornecedorModal();
+        loadFornecedores();
+    } else {
+        showToast('Erro ao salvar fornecedor', 'error');
+    }
+}
+
+async function deleteFornecedor(id) {
+    const f = fornecedores.find(x => x.id === id);
+    if (!f) return;
+    if (!confirm('Tem certeza que deseja excluir o fornecedor "' + f.nome + '"?')) return;
+    const res = await apiDelete('/api/fornecedores/' + id);
+    if (res.success) {
+        showToast('Fornecedor excluído', 'success');
+        loadFornecedores();
+    } else {
+        showToast('Erro ao excluir fornecedor', 'error');
+    }
+}
+
+// Compras
+function openCompraModal(materialId, materialNome, unidade, fornecedorId) {
+    document.getElementById('compraForm').reset();
+    document.getElementById('compraMaterialId').value = materialId;
+    document.getElementById('compraMaterialNome').value = materialNome;
+    document.getElementById('compraUnidade').value = unidade || '';
+    document.getElementById('compraData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('compraTotal').value = '';
+    updateFornecedorSelects();
+    document.getElementById('compraFornecedorId').value = fornecedorId != null ? fornecedorId : '';
+    document.getElementById('compraModal').classList.add('active');
+}
+
+function closeCompraModal() {
+    document.getElementById('compraModal').classList.remove('active');
+}
+
+function calcCompraTotal() {
+    const qty = parseFloat(document.getElementById('compraQuantidade').value) || 0;
+    const preco = parseFloat(document.getElementById('compraPrecoUnit').value) || 0;
+    document.getElementById('compraTotal').value = '€' + (qty * preco).toFixed(2);
+}
+
+async function saveCompra(e) {
+    e.preventDefault();
+
+    const data = {
+        material_id: parseInt(document.getElementById('compraMaterialId').value),
+        fornecedor_id: document.getElementById('compraFornecedorId').value || null,
+        data_compra: document.getElementById('compraData').value,
+        quantidade: parseFloat(document.getElementById('compraQuantidade').value) || 0,
+        unidade: document.getElementById('compraUnidade').value,
+        preco_unitario: parseFloat(document.getElementById('compraPrecoUnit').value) || 0,
+        notas: document.getElementById('compraNotas').value
+    };
+
+    const res = await apiPost('/api/compras', data);
+    if (res.success) {
+        showToast('Compra registada!', 'success');
+        closeCompraModal();
+        loadMateriais();
+        loadHistoricoCompras();
+    } else {
+        showToast('Erro ao registar compra', 'error');
+    }
+}
+
+async function loadHistoricoCompras() {
+    const fornecedorId = document.getElementById('filtroFornecedorHistorico')?.value || '';
+    let url = '/api/compras';
+    if (fornecedorId) url += '?fornecedor_id=' + encodeURIComponent(fornecedorId);
+
+    const compras = await apiGet(url);
+    const body = document.getElementById('comprasTableBody');
+    const empty = document.getElementById('comprasEmpty');
+    if (!body) return;
+
+    if (!compras.length) {
+        body.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    body.innerHTML = compras.map(c => `
+        <tr>
+            <td>${formatDate(c.data_compra)}</td>
+            <td>${c.material_nome || '—'}</td>
+            <td>${c.fornecedor_nome || '—'}</td>
+            <td>${formatNumber(c.quantidade)} ${c.unidade || ''}</td>
+            <td>€${parseFloat(c.preco_unitario || 0).toFixed(2)}</td>
+            <td><b>€${parseFloat(c.preco_total || 0).toFixed(2)}</b></td>
+            <td style="color:var(--text-light);font-size:13px;">${c.notas || ''}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="card-btn" onclick="deleteCompra(${c.id})" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function deleteCompra(id) {
+    if (!confirm('Tem certeza que deseja excluir este registo de compra?')) return;
+    const res = await apiDelete('/api/compras/' + id);
+    if (res.success) {
+        showToast('Compra excluída', 'success');
+        loadHistoricoCompras();
+        loadMateriais();
+    } else {
+        showToast('Erro ao excluir compra', 'error');
     }
 }
 

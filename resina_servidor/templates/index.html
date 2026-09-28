@@ -354,6 +354,55 @@
             color: var(--danger); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 18px;
         }
         .login-btn { width: 100%; justify-content: center; margin-top: 4px; }
+
+        /* ====== CALCULADORA DE CUSTOS ====== */
+        .calc-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            margin-bottom: 20px; overflow: hidden;
+        }
+        .calc-card-title {
+            background: rgba(255,255,255,0.03); padding: 14px 18px; font-weight: 600; font-size: 15px;
+            cursor: pointer; border-bottom: 1px solid var(--border); user-select: none;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .calc-panel-body { padding: 20px; }
+        .calc-grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .calc-grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .calc-group {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px;
+            padding: 14px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .calc-group-title { color: var(--gold); margin: 0 0 8px 0; font-size: 14px; font-weight: 600; }
+        .calc-group label { font-size: 12px; color: var(--text-light); margin-bottom: 0; }
+        .calc-group input[type="number"], .calc-group select {
+            background: var(--dark); border: 1px solid var(--border); color: var(--text); border-radius: 8px;
+            padding: 8px 10px; font-size: 13px; width: 100%; box-sizing: border-box; font-family: inherit; outline: none;
+        }
+        .calc-group input[type="number"]:focus, .calc-group select:focus { border-color: var(--gold); }
+        .calc-result-line {
+            font-size: 12px; color: var(--gold-light); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border);
+        }
+        .btn-small {
+            background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+            padding: 6px 14px; cursor: pointer; font-size: 13px; font-family: inherit;
+        }
+        .btn-small:hover { background: rgba(255,255,255,0.1); border-color: var(--gold); }
+        .btn-danger-small { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+        .calc-markup-inputs { font-size: 13px; font-weight: 400; color: var(--text-light); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .calc-markup-inputs input[type="number"] {
+            width: 55px; background: var(--dark); border: 1px solid var(--border); color: var(--text);
+            border-radius: 6px; padding: 4px 6px; font-family: inherit;
+        }
+        .calc-desc-tier {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px;
+            min-width: 130px; font-size: 12px; color: var(--text-light);
+        }
+        .calc-desc-tier input[type="number"] {
+            width: 55px; background: var(--dark); border: 1px solid var(--border); color: var(--text);
+            border-radius: 6px; padding: 3px 6px; font-family: inherit;
+        }
+        .calc-alert-ok { color: var(--success); }
+        .calc-alert-bad { color: var(--danger); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -477,6 +526,10 @@
                 <span class="nav-icon">🧱</span>
                 <span>Stock</span>
                 <span class="nav-badge" id="badgeStockBaixo" style="display:none;background:var(--danger);color:white;">0</span>
+            </div>
+            <div class="nav-item" onclick="showTab('calculadora')" data-tab="calculadora">
+                <span class="nav-icon">🧮</span>
+                <span>Calculadora</span>
             </div>
             <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border);">
                 <div class="nav-item" onclick="showTab('config')" data-tab="config">

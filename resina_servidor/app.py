@@ -27,6 +27,21 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
+FOTOS_MATERIAIS_FOLDER = os.path.join(BASE_DIR, "static", "fotos_materiais")
+os.makedirs(FOTOS_MATERIAIS_FOLDER, exist_ok=True)
+ALLOWED_FOTO_EXT = {'png', 'jpg', 'jpeg', 'webp'}
+MAX_FOTO_SIZE = 2 * 1024 * 1024  # 2MB
+
+EMOJI_POR_CATEGORIA = {
+    'Impressão': '🖨️',
+    'Resina': '💧',
+    'Bases': '📦',
+    'Consumíveis': '🧤',
+}
+
+def emoji_por_categoria(categoria):
+    return EMOJI_POR_CATEGORIA.get(categoria, '📦')
+
 # Sessão / autenticação
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'elements-troque-esta-chave-em-producao')
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -195,10 +210,11 @@ def init_db():
         )
     """)
 
-    # Migração: adicionar colunas novas à tabela materiais (fornecedor associado + preço mais recente)
+    # Migração: adicionar colunas novas à tabela materiais (fornecedor associado, preço mais recente, foto)
     materiais_colunas_novas = [
         ('fornecedor_id', 'INTEGER REFERENCES fornecedores(id)'),
-        ('preco_atual', 'REAL')
+        ('preco_atual', 'REAL'),
+        ('foto_path', 'TEXT')
     ]
     for col, coltype in materiais_colunas_novas:
         if not column_exists(cursor, 'materiais', col):
@@ -212,7 +228,41 @@ def init_db():
     conn.close()
     print("[DEBUG] Banco de dados inicializado com sucesso!")
 
+def migrar_categorias():
+    """
+    Preenche a categoria dos materiais existentes com base no nome.
+    Só corre se AINDA NÃO houver categorias reais na tabela (tudo NULL ou 'Consumíveis'),
+    para nunca sobrescrever categorias que o utilizador já tenha ajustado manualmente.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    valores_atuais = {row[0] for row in cursor.execute("SELECT DISTINCT categoria FROM materiais").fetchall()}
+    if not valores_atuais.issubset({None, 'Consumíveis'}):
+        conn.close()
+        return
+
+    regras = [
+        ('%Papel fotográfico%', 'Impressão'),
+        ('%Tinteiro%', 'Impressão'),
+        ('%Resina%', 'Resina'),
+        ('%Íman%', 'Bases'),
+        ('%Iman%', 'Bases'),
+        ('%Velcro%', 'Bases'),
+        ('%pingente%', 'Bases'),
+        ('%Argola%', 'Bases'),
+        ('%corrente%', 'Bases'),
+    ]
+    for padrao, categoria in regras:
+        cursor.execute("UPDATE materiais SET categoria = ? WHERE nome LIKE ?", (categoria, padrao))
+
+    cursor.execute("UPDATE materiais SET categoria = 'Consumíveis' WHERE categoria IS NULL")
+    conn.commit()
+    conn.close()
+    print("[MIGRACAO] Categorias de materiais atualizadas")
+
 init_db()
+migrar_categorias()
 
 @app.route("/")
 def index():
@@ -454,12 +504,17 @@ def api_orcamentos():
 def row_to_material(row):
     quantidade_atual = row[3] or 0
     quantidade_minima = row[4] or 0
+    categoria = row[2]
+    foto_path = row[12]
     return {
-        "id": row[0], "nome": row[1], "categoria": row[2],
+        "id": row[0], "nome": row[1], "categoria": categoria,
         "quantidade_atual": quantidade_atual, "quantidade_minima": quantidade_minima,
         "unidade": row[5], "preco_unitario": row[6], "fornecedor": row[7],
         "notas": row[8], "data_atualizacao": row[9],
-        "fornecedor_id": row[10], "preco_atual": row[11], "fornecedor_nome": row[12],
+        "fornecedor_id": row[10], "preco_atual": row[11],
+        "foto_path": foto_path, "foto_url": f"/static/{foto_path}" if foto_path else None,
+        "emoji": emoji_por_categoria(categoria),
+        "fornecedor_nome": row[13],
         "stock_baixo": quantidade_atual <= quantidade_minima
     }
 
@@ -474,7 +529,7 @@ def api_materiais():
             INSERT INTO materiais (nome, categoria, quantidade_atual, quantidade_minima, unidade, preco_unitario, fornecedor, notas, fornecedor_id, preco_atual, data_atualizacao)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (
-            data.get('nome', ''), data.get('categoria', ''),
+            data.get('nome', ''), data.get('categoria') or 'Consumíveis',
             data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
             data.get('unidade', ''), data.get('preco_unitario', 0),
             data.get('fornecedor', ''), data.get('notas', ''),
@@ -490,7 +545,7 @@ def api_materiais():
     query = """
         SELECT m.id, m.nome, m.categoria, m.quantidade_atual, m.quantidade_minima, m.unidade,
                m.preco_unitario, m.fornecedor, m.notas, m.data_atualizacao, m.fornecedor_id, m.preco_atual,
-               f.nome as fornecedor_nome
+               m.foto_path, f.nome as fornecedor_nome
         FROM materiais m
         LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
         WHERE 1=1
@@ -519,7 +574,7 @@ def api_material(id):
             unidade=?, preco_unitario=?, fornecedor=?, notas=?, fornecedor_id=?, preco_atual=?, data_atualizacao=CURRENT_TIMESTAMP
             WHERE id=?
         """, (
-            data.get('nome'), data.get('categoria'),
+            data.get('nome'), data.get('categoria') or 'Consumíveis',
             data.get('quantidade_atual', 0), data.get('quantidade_minima', 0),
             data.get('unidade'), data.get('preco_unitario', 0),
             data.get('fornecedor'), data.get('notas'),
@@ -670,6 +725,51 @@ def upload_file():
 @app.route("/static/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route("/material/<int:mid>/foto", methods=["POST"])
+def upload_foto_material(mid):
+    if 'foto' not in request.files:
+        return jsonify({"ok": False, "error": "Nenhum ficheiro enviado"}), 400
+
+    file = request.files['foto']
+    if file.filename == '':
+        return jsonify({"ok": False, "error": "Nenhum ficheiro selecionado"}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_FOTO_EXT:
+        return jsonify({"ok": False, "error": "Formato inválido. Use PNG, JPG ou WEBP."}), 400
+
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_FOTO_SIZE:
+        return jsonify({"ok": False, "error": "Ficheiro demasiado grande (máx. 2MB)."}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    existe = cursor.execute("SELECT id FROM materiais WHERE id = ?", (mid,)).fetchone()
+    if not existe:
+        conn.close()
+        return jsonify({"ok": False, "error": "Material não encontrado"}), 404
+
+    # Remove fotos antigas deste material com outra extensão
+    for old_ext in ALLOWED_FOTO_EXT:
+        old_path = os.path.join(FOTOS_MATERIAIS_FOLDER, f"{mid}.{old_ext}")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    filename = f"{mid}.{ext}"
+    file.save(os.path.join(FOTOS_MATERIAIS_FOLDER, filename))
+
+    foto_path = f"fotos_materiais/{filename}"
+    cursor.execute("UPDATE materiais SET foto_path=? WHERE id=?", (foto_path, mid))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"ok": True, "url": f"/static/{foto_path}"})
 
 @app.route("/api/export")
 def export_data():

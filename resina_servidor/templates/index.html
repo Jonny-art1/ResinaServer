@@ -403,6 +403,64 @@
         }
         .calc-alert-ok { color: var(--success); }
         .calc-alert-bad { color: var(--danger); font-weight: 600; }
+
+        /* ====== STOCK — ABAS E LINHAS DE MATERIAL ====== */
+        .stock-tab-bar { display: flex; gap: 1px; border-bottom: 2px solid var(--border); margin-bottom: 16px; overflow-x: auto; }
+        .stab {
+            padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--text-light); background: none;
+            border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer;
+            white-space: nowrap; font-family: inherit; transition: all 0.15s;
+        }
+        .stab:hover { color: var(--text); }
+        .stab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        .mat-row {
+            display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+            transition: background 0.15s; border: 1px solid transparent;
+        }
+        .mat-row:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+
+        .mat-thumb {
+            width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center; font-size: 19px; overflow: hidden;
+            position: relative; cursor: pointer; background: rgba(255,255,255,0.02);
+        }
+        .mat-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; }
+        .mat-thumb .upload-hint {
+            display: none; position: absolute; inset: 0; border-radius: 9px; background: rgba(0,0,0,0.6);
+            align-items: center; justify-content: center; font-size: 10px; color: #fff; text-align: center; line-height: 1.3;
+        }
+        .mat-row:hover .mat-thumb .upload-hint { display: flex; }
+
+        .mat-info { flex: 1; min-width: 0; }
+        .mat-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mat-sub { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+        .mat-qty-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 78px; }
+        .mat-qty { font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+        .mat-qty.low { color: var(--danger); }
+        .mat-qty.ok { color: var(--success); }
+        .mat-qty-bar { width: 60px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .mat-qty-fill { height: 100%; border-radius: 2px; background: var(--success); }
+        .mat-qty-fill.low { background: var(--danger); }
+
+        .mat-price { font-size: 13px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; white-space: nowrap; }
+        .mat-price-lbl { font-size: 9px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-top: 1px; font-weight: 400; }
+
+        .mat-badge {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.04em; border-radius: 20px; padding: 4px 10px;
+            white-space: nowrap; min-width: 76px; text-align: center; text-transform: uppercase;
+        }
+        .mat-badge.low { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .mat-badge.ok { background: rgba(16,185,129,0.15); color: var(--success); }
+
+        .mat-acts { display: flex; gap: 6px; }
+
+        .cat-divider {
+            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light);
+            padding: 5px 10px; margin: 14px 0 4px; border-left: 2px solid var(--gold);
+        }
+        .cat-divider:first-child { margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -697,41 +755,19 @@
 
                 <div class="filters">
                     <div class="search-box">
-                        <input type="text" id="searchMateriais" placeholder="Buscar por nome ou fornecedor..." oninput="renderMateriais()">
+                        <input type="text" id="searchMateriais" placeholder="Buscar por nome ou fornecedor..." oninput="renderStock()">
                     </div>
-                    <select class="filter-select" id="filterCategoria" onchange="loadMateriais()">
-                        <option value="">Todas as Categorias</option>
-                        <option value="resina">Resina</option>
-                        <option value="adesivo">Adesivo</option>
-                        <option value="folha">Folha</option>
-                        <option value="outro">Outro</option>
-                    </select>
                 </div>
 
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Material</th>
-                                <th>Categoria</th>
-                                <th>Quantidade</th>
-                                <th>Mínimo</th>
-                                <th>Preço Unit.</th>
-                                <th>Fornecedor</th>
-                                <th>Preço Atual</th>
-                                <th>Status</th>
-                                <th>Atualizado</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="materiaisTableBody"></tbody>
-                    </table>
+                <div class="stock-tab-bar">
+                    <button class="stab active" data-cat="todos" onclick="setStockTab('todos', this)">Todos (<span id="cnt-todos">0</span>)</button>
+                    <button class="stab" data-cat="Impressão" onclick="setStockTab('Impressão', this)">🖨️ Impressão</button>
+                    <button class="stab" data-cat="Resina" onclick="setStockTab('Resina', this)">🔷 Resina</button>
+                    <button class="stab" data-cat="Bases" onclick="setStockTab('Bases', this)">📦 Bases</button>
+                    <button class="stab" data-cat="Consumíveis" onclick="setStockTab('Consumíveis', this)">🧪 Consumíveis</button>
                 </div>
-                <div class="empty-state" id="materiaisEmpty" style="display:none;">
-                    <div class="empty-state-icon">🧱</div>
-                    <h3>Nenhum material cadastrado</h3>
-                    <p>Clique em "Novo Material" para começar a controlar seu stock.</p>
-                </div>
+
+                <div id="stock-rows"></div>
             </div>
 
             <!-- Fornecedores -->
@@ -993,6 +1029,16 @@
             <div class="modal-body">
                 <form id="materialForm" onsubmit="saveMaterial(event)">
                     <input type="hidden" id="materialId">
+                    <div class="form-group" id="materialFotoGroup" style="display:none;">
+                        <label class="form-label">Foto do Material</label>
+                        <div style="display:flex;align-items:center;gap:14px;">
+                            <div class="mat-thumb" id="materialFotoPreview" style="width:64px;height:64px;font-size:26px;">
+                                <span>📦</span>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('materialFotoInput').click()">🖼️ Mudar Foto</button>
+                            <input type="file" id="materialFotoInput" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="uploadFotoFromModal(this)">
+                        </div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group" style="flex:2;">
                             <label class="form-label">Nome do Material *</label>
@@ -1001,10 +1047,10 @@
                         <div class="form-group">
                             <label class="form-label">Categoria</label>
                             <select class="form-select" id="materialCategoria">
-                                <option value="resina">Resina</option>
-                                <option value="adesivo">Adesivo</option>
-                                <option value="folha">Folha</option>
-                                <option value="outro">Outro</option>
+                                <option value="Impressão">🖨️ Impressão</option>
+                                <option value="Resina">🔷 Resina</option>
+                                <option value="Bases">📦 Bases</option>
+                                <option value="Consumíveis">🧪 Consumíveis</option>
                             </select>
                         </div>
                     </div>
@@ -1045,8 +1091,9 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Preço Atual (€)</label>
+                            <label class="form-label">Preço Unitário (p/un) (€)</label>
                             <input type="number" class="form-input" id="materialPrecoAtual" step="0.01" min="0" placeholder="Preço mais recente">
+                            <div style="font-size:11px;color:var(--text-light);margin-top:6px;">Preço da última encomenda, sem fretes.</div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -1978,58 +2025,125 @@ function usarOrcamento(id) {
 }
 
 // Materiais (Stock)
-const CATEGORIA_LABELS = { resina: 'Resina', adesivo: 'Adesivo', folha: 'Folha', outro: 'Outro' };
+const STOCK_ORDER_CATS = ['Impressão', 'Resina', 'Bases', 'Consumíveis'];
+let stockActiveTab = 'todos';
 
 async function loadMateriais() {
-    const categoria = document.getElementById('filterCategoria')?.value || '';
-    let url = '/api/materiais';
-    if (categoria) url += '?categoria=' + encodeURIComponent(categoria);
-
-    materiais = await apiGet(url);
-    renderMateriais();
+    materiais = await apiGet('/api/materiais');
+    renderStock();
     updateMateriaisStats();
 }
 
-function renderMateriais() {
-    const search = (document.getElementById('searchMateriais')?.value || '').toLowerCase();
-    const body = document.getElementById('materiaisTableBody');
-    const empty = document.getElementById('materiaisEmpty');
+function setStockTab(cat, btnEl) {
+    stockActiveTab = cat;
+    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    renderStock();
+}
 
-    let filtrados = materiais;
+function stockQtyPct(qty, min) {
+    if (!min || min === 0) return qty > 0 ? 100 : 0;
+    return Math.min(100, Math.round((qty / min) * 100));
+}
+
+function catIcon(c) {
+    return { 'Impressão': '🖨️', 'Resina': '🔷', 'Bases': '📦', 'Consumíveis': '🧪' }[c] || '📦';
+}
+
+function matThumbHTML(m) {
+    const bg = { 'Impressão': 'rgba(100,100,255,.1)', 'Resina': 'rgba(0,196,180,.08)', 'Bases': 'rgba(212,168,67,.1)', 'Consumíveis': 'rgba(120,120,180,.08)' }[m.categoria] || '';
+    const inner = m.foto_url
+        ? `<img src="${m.foto_url}" alt="">`
+        : `<span>${m.emoji || '📦'}</span>`;
+    return `<div class="mat-thumb" style="background:${bg}" onclick="triggerFotoUpload(${m.id})" title="Carregar foto">
+        ${inner}
+        <div class="upload-hint">📷<br>foto</div>
+    </div>
+    <input type="file" id="foto-inp-${m.id}" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="uploadFoto(${m.id},this)">`;
+}
+
+function matRowHTML(m, showCat) {
+    const low = m.quantidade_atual < m.quantidade_minima;
+    const pct = stockQtyPct(m.quantidade_atual, m.quantidade_minima);
+    const preco = m.preco_atual != null ? m.preco_atual : m.preco_unitario;
+    const priceStr = preco != null ? `€${parseFloat(preco).toFixed(2)}<span class="mat-price-lbl">p/un</span>` : '—';
+    const divider = showCat ? `<div class="cat-divider">${catIcon(m.categoria)} ${m.categoria}</div>` : '';
+    return `${divider}
+    <div class="mat-row" data-cat="${m.categoria}" data-id="${m.id}">
+        ${matThumbHTML(m)}
+        <div class="mat-info">
+            <div class="mat-name">${m.nome}</div>
+            <div class="mat-sub">${m.unidade || 'un'} · ${m.fornecedor_nome || m.fornecedor || '—'}</div>
+        </div>
+        <div class="mat-qty-wrap">
+            <div class="mat-qty ${low ? 'low' : 'ok'}">${formatNumber(m.quantidade_atual)} / ${formatNumber(m.quantidade_minima)}</div>
+            <div class="mat-qty-bar"><div class="mat-qty-fill ${low ? 'low' : ''}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="mat-price">${priceStr}</div>
+        <div class="mat-badge ${low ? 'low' : 'ok'}">${low ? 'STOCK BAIXO' : 'EM STOCK'}</div>
+        <div class="mat-acts">
+            <button class="card-btn" onclick='openCompraModal(${m.id}, ${JSON.stringify(m.nome)}, ${JSON.stringify(m.unidade || "")}, ${m.fornecedor_id != null ? m.fornecedor_id : 'null'})' title="Registar Compra">📦</button>
+            <button class="card-btn" onclick="editMaterial(${m.id})" title="Editar">✏️</button>
+            <button class="card-btn" onclick="deleteMaterial(${m.id})" title="Excluir">🗑️</button>
+        </div>
+    </div>`;
+}
+
+function renderStock() {
+    const container = document.getElementById('stock-rows');
+    if (!container) return;
+
+    const search = (document.getElementById('searchMateriais')?.value || '').toLowerCase();
+    let lista = materiais;
     if (search) {
-        filtrados = filtrados.filter(m =>
+        lista = lista.filter(m =>
             (m.nome || '').toLowerCase().includes(search) ||
-            (m.fornecedor || '').toLowerCase().includes(search)
+            (m.fornecedor_nome || m.fornecedor || '').toLowerCase().includes(search)
         );
     }
 
-    if (!filtrados.length) {
-        body.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-    }
-    empty.style.display = 'none';
+    const cntTodos = document.getElementById('cnt-todos');
+    if (cntTodos) cntTodos.textContent = materiais.length;
 
-    body.innerHTML = filtrados.map(m => `
-        <tr class="${m.stock_baixo ? 'low-stock-row' : ''}">
-            <td>${m.stock_baixo ? '<span class="low-stock-dot"></span>' : ''}${m.nome}</td>
-            <td>${CATEGORIA_LABELS[m.categoria] || m.categoria || '—'}</td>
-            <td>${formatNumber(m.quantidade_atual)} ${m.unidade || ''}</td>
-            <td>${formatNumber(m.quantidade_minima)} ${m.unidade || ''}</td>
-            <td>€${parseFloat(m.preco_unitario || 0).toFixed(2)}</td>
-            <td>${m.fornecedor_nome || m.fornecedor || '—'}</td>
-            <td>${m.preco_atual != null ? '€' + parseFloat(m.preco_atual).toFixed(2) : '—'}</td>
-            <td>${m.stock_baixo ? '<span class="low-stock-badge">Stock Baixo</span>' : '<span class="ok-stock-badge">OK</span>'}</td>
-            <td>${formatDate(m.data_atualizacao)}</td>
-            <td>
-                <div class="table-actions">
-                    <button class="card-btn" onclick='openCompraModal(${m.id}, ${JSON.stringify(m.nome)}, ${JSON.stringify(m.unidade || "")}, ${m.fornecedor_id != null ? m.fornecedor_id : 'null'})' title="Registar Compra">📦</button>
-                    <button class="card-btn" onclick="editMaterial(${m.id})" title="Editar">✏️</button>
-                    <button class="card-btn" onclick="deleteMaterial(${m.id})" title="Excluir">🗑️</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    let html = '';
+    if (stockActiveTab === 'todos') {
+        STOCK_ORDER_CATS.forEach(c => {
+            const grupo = lista.filter(m => m.categoria === c);
+            grupo.forEach((m, i) => { html += matRowHTML(m, i === 0); });
+        });
+        const outros = lista.filter(m => !STOCK_ORDER_CATS.includes(m.categoria));
+        outros.forEach((m, i) => { html += matRowHTML(m, i === 0); });
+    } else {
+        const grupo = lista.filter(m => m.categoria === stockActiveTab);
+        if (!grupo.length) html = '<div style="padding:30px;text-align:center;color:var(--text-light);font-size:13px">Nenhum material nesta categoria</div>';
+        else grupo.forEach(m => { html += matRowHTML(m, false); });
+    }
+
+    container.innerHTML = html || '<div style="padding:30px;text-align:center;color:var(--text-light);font-size:13px">Sem materiais</div>';
+}
+
+function triggerFotoUpload(id) {
+    document.getElementById('foto-inp-' + id).click();
+}
+
+async function uploadFoto(id, input) {
+    if (!input.files[0]) return;
+    const fd = new FormData();
+    fd.append('foto', input.files[0]);
+    try {
+        const res = await fetch(`/material/${id}/foto`, { method: 'POST', body: fd });
+        const d = await res.json();
+        if (d.ok) {
+            const m = materiais.find(x => x.id === id);
+            if (m) m.foto_url = d.url + '?t=' + Date.now();
+            renderStock();
+            showToast('Foto atualizada!', 'success');
+        } else {
+            showToast(d.error || 'Erro ao carregar foto', 'error');
+        }
+    } catch (e) {
+        showToast('Erro ao carregar foto', 'error');
+    }
 }
 
 function formatNumber(n) {
@@ -2058,8 +2172,36 @@ function updateMateriaisStats() {
 function openMaterialModal() {
     editingMaterial = null;
     document.getElementById('materialForm').reset();
+    document.getElementById('materialFotoGroup').style.display = 'none';
+    document.getElementById('materialFotoPreview').innerHTML = '<span>📦</span>';
     document.getElementById('materialModalTitle').textContent = 'Novo Material';
     document.getElementById('materialModal').classList.add('active');
+}
+
+function setMaterialFotoPreview(m) {
+    const preview = document.getElementById('materialFotoPreview');
+    preview.innerHTML = m.foto_url ? `<img src="${m.foto_url}" alt="">` : `<span>${m.emoji || '📦'}</span>`;
+}
+
+async function uploadFotoFromModal(input) {
+    if (!input.files[0] || !editingMaterial) return;
+    const fd = new FormData();
+    fd.append('foto', input.files[0]);
+    try {
+        const res = await fetch(`/material/${editingMaterial}/foto`, { method: 'POST', body: fd });
+        const d = await res.json();
+        if (d.ok) {
+            const url = d.url + '?t=' + Date.now();
+            document.getElementById('materialFotoPreview').innerHTML = `<img src="${url}" alt="">`;
+            const m = materiais.find(x => x.id === editingMaterial);
+            if (m) m.foto_url = url;
+            showToast('Foto atualizada!', 'success');
+        } else {
+            showToast(d.error || 'Erro ao carregar foto', 'error');
+        }
+    } catch (e) {
+        showToast('Erro ao carregar foto', 'error');
+    }
 }
 
 function updateFornecedorSelects() {
@@ -2090,7 +2232,7 @@ function editMaterial(id) {
 
     document.getElementById('materialId').value = m.id;
     document.getElementById('materialNome').value = m.nome;
-    document.getElementById('materialCategoria').value = m.categoria || 'outro';
+    document.getElementById('materialCategoria').value = m.categoria || 'Consumíveis';
     document.getElementById('materialQuantidadeAtual').value = m.quantidade_atual || 0;
     document.getElementById('materialQuantidadeMinima').value = m.quantidade_minima || 0;
     document.getElementById('materialUnidade').value = m.unidade || 'unidades';
@@ -2099,6 +2241,9 @@ function editMaterial(id) {
     document.getElementById('materialFornecedorId').value = m.fornecedor_id || '';
     document.getElementById('materialPrecoAtual').value = m.preco_atual != null ? m.preco_atual : '';
     document.getElementById('materialNotas').value = m.notas || '';
+
+    document.getElementById('materialFotoGroup').style.display = 'block';
+    setMaterialFotoPreview(m);
 
     document.getElementById('materialModalTitle').textContent = 'Editar Material';
     document.getElementById('materialModal').classList.add('active');

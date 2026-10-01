@@ -2704,13 +2704,6 @@ async function importData(input) {
     input.value = '';
 }
 
-// Fechar modais ao clicar fora
-document.querySelectorAll('.modal-overlay').forEach(el => {
-    el.addEventListener('click', (e) => {
-        if (e.target === el) el.classList.remove('active');
-    });
-});
-
 // Atalhos de teclado
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {

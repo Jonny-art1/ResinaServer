@@ -860,6 +860,240 @@
                 </div>
             </div>
 
+            <!-- Calculadora de Custos -->
+            <div id="tab-calculadora" class="tab-content" style="display:none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-title-icon">🧮</div>
+                        Calculadora de Custos
+                    </div>
+                </div>
+                <p style="color:var(--text-light);font-size:13px;margin-top:-16px;margin-bottom:20px;">Todos os valores são calculados em tempo real.</p>
+
+                <!-- CONFIG: Materiais -->
+                <div class="calc-card">
+                    <div class="calc-card-title" onclick="toggleCalcPanel('panel-materiais')">
+                        ⚙️ Configuração dos Materiais <span id="arrow-materiais">▼</span>
+                    </div>
+                    <div id="panel-materiais" class="calc-panel-body">
+                        <div class="calc-grid-3">
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🖨️ Papel Fotográfico</h4>
+                                <label>Preço do pack (€)</label>
+                                <input type="number" id="c-papel-preco" value="14" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Folhas por pack</label>
+                                <input type="number" id="c-papel-folhas" value="20" min="1" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo/folha: <span id="cr-papel-folha">€0.700</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🎨 Tinteiros</h4>
+                                <label>Preço por tinteiro (€)</label>
+                                <input type="number" id="c-tinta-preco" value="4.60" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Rendimento (páginas ISO)</label>
+                                <input type="number" id="c-tinta-rendimento" value="500" min="1" step="10" oninput="calcUpdate()">
+                                <label>Nº de cores (tinteiros)</label>
+                                <input type="number" id="c-tinta-cores" value="4" min="1" step="1" oninput="calcUpdate()">
+                                <label>Intensidade do desenho (%)</label>
+                                <input type="number" id="c-tinta-intensidade" value="25" min="1" max="100" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo tinta/página: <span id="cr-tinta-pagina">€0.0368</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">📐 Layout de Impressão</h4>
+                                <label>Margem da folha, cada lado (cm)</label>
+                                <input type="number" id="c-margem" value="1.5" min="0" step="0.1" oninput="calcUpdate()">
+                                <label>Espaço entre peças (cm)</label>
+                                <input type="number" id="c-espaco" value="0.3" min="0" step="0.1" oninput="calcUpdate()">
+                                <label>Desperdício de impressão (%)</label>
+                                <input type="number" id="c-imp-desperdicio" value="5" min="0" max="50" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Área útil: <span id="cr-area-util">18.0 × 26.7 cm</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🧪 Resina</h4>
+                                <label>Preço da embalagem (€)</label>
+                                <input type="number" id="c-resina-preco" value="24" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Peso da embalagem (g)</label>
+                                <input type="number" id="c-resina-peso" value="700" min="1" step="10" oninput="calcUpdate()">
+                                <label>Desperdício de resina (%)</label>
+                                <input type="number" id="c-resina-desperdicio" value="10" min="0" max="50" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo/grama: <span id="cr-resina-grama">€0.0343</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🔬 Calibração da Resina</h4>
+                                <label>Forma da peça de calibração</label>
+                                <select id="c-calib-forma" oninput="calcUpdate()">
+                                    <option value="retangulo" selected>Retângulo</option>
+                                    <option value="circulo">Círculo</option>
+                                    <option value="oval">Oval</option>
+                                </select>
+                                <label>Medida A — comprimento ou Ø (cm)</label>
+                                <input type="number" id="c-calib-A" value="7.5" min="0.1" step="0.1" oninput="calcUpdate()">
+                                <label>Medida B — largura (cm)</label>
+                                <input type="number" id="c-calib-B" value="5.5" min="0.1" step="0.1" oninput="calcUpdate()">
+                                <label>Peso SEM resina (g)</label>
+                                <input type="number" id="c-calib-sem" value="1" min="0" step="0.1" oninput="calcUpdate()">
+                                <label>Peso COM resina (g)</label>
+                                <input type="number" id="c-calib-com" value="6" min="0" step="0.1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Densidade: <span id="cr-densidade">0.121 g/cm²</span></div>
+                                <div class="calc-result-line">Custo resina/cm²: <span id="cr-resina-cm2">€0.00416</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🧲 Íman (folha magnética A4)</h4>
+                                <label>Preço por folha (€)</label>
+                                <input type="number" id="c-iman-preco" value="1.50" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Largura da folha (cm)</label>
+                                <input type="number" id="c-iman-largura" value="21" min="1" step="0.1" oninput="calcUpdate()">
+                                <label>Altura da folha (cm)</label>
+                                <input type="number" id="c-iman-altura" value="29.7" min="1" step="0.1" oninput="calcUpdate()">
+                                <label>Espaço de corte entre peças (cm)</label>
+                                <input type="number" id="c-iman-corte" value="0.2" min="0" step="0.1" oninput="calcUpdate()">
+                                <label>Desperdício extra (%)</label>
+                                <input type="number" id="c-iman-desperdicio" value="5" min="0" max="50" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo/cm²: <span id="cr-iman-cm2">€0.00240</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🔗 Velcro (rolo)</h4>
+                                <label>Preço do rolo (€)</label>
+                                <input type="number" id="c-velcro-preco" value="8" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Comprimento do rolo (m)</label>
+                                <input type="number" id="c-velcro-comprimento" value="5" min="0.1" step="0.1" oninput="calcUpdate()">
+                                <label>Largura do rolo (cm)</label>
+                                <input type="number" id="c-velcro-largura" value="10" min="1" step="0.1" oninput="calcUpdate()">
+                                <label>Espaço de corte entre peças (cm)</label>
+                                <input type="number" id="c-velcro-corte" value="0.2" min="0" step="0.1" oninput="calcUpdate()">
+                                <label>Desperdício extra (%)</label>
+                                <input type="number" id="c-velcro-desperdicio" value="5" min="0" max="50" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo/cm²: <span id="cr-velcro-cm2">€0.00160</span></div>
+                            </div>
+
+                            <div class="calc-group">
+                                <h4 class="calc-group-title">🔑 Pingente / Chaveiro</h4>
+                                <label>Preço do pack de bases (€)</label>
+                                <input type="number" id="c-ping-base-preco" value="5" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Unidades por pack de bases</label>
+                                <input type="number" id="c-ping-base-qtd" value="20" min="1" step="1" oninput="calcUpdate()">
+                                <label>Preço do pack de argolas (€)</label>
+                                <input type="number" id="c-ping-argola-preco" value="5" min="0" step="0.01" oninput="calcUpdate()">
+                                <label>Unidades por pack de argolas</label>
+                                <input type="number" id="c-ping-argola-qtd" value="20" min="1" step="1" oninput="calcUpdate()">
+                                <div class="calc-result-line">Custo total/unidade: <span id="cr-pingente-unit">€0.500</span></div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRODUTOS -->
+                <div class="calc-card">
+                    <div class="calc-card-title">
+                        📦 Produtos
+                        <button class="btn-small" onclick="calcAddProduct()">+ Produto</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table" id="calc-products-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Forma</th>
+                                    <th>A (cm)</th>
+                                    <th>B (cm)</th>
+                                    <th>Raio (cm)</th>
+                                    <th>Base</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="calc-products-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- RESUMO / RESULTADOS -->
+                <div class="calc-card">
+                    <div class="calc-card-title">
+                        💰 Resumo de Custos
+                        <span class="calc-markup-inputs">
+                            Markup 1: <input type="number" id="c-markup1" value="2" min="1" step="0.1" oninput="calcUpdate()">×
+                            Markup 2: <input type="number" id="c-markup2" value="2.5" min="1" step="0.1" oninput="calcUpdate()">×
+                            Markup 3: <input type="number" id="c-markup3" value="3" min="1" step="0.1" oninput="calcUpdate()">×
+                        </span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table" id="calc-results-table">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Base</th>
+                                    <th>Impressão</th>
+                                    <th>Resina</th>
+                                    <th>Base mat.</th>
+                                    <th>Custo Total</th>
+                                    <th id="th-mk1">Preço ×2</th>
+                                    <th id="th-mk2">Preço ×2.5</th>
+                                    <th id="th-mk3">Preço ×3</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calc-results-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CALCULADORA DE DESCONTOS -->
+                <div class="calc-card">
+                    <div class="calc-card-title">🏷️ Calculadora de Descontos por Quantidade</div>
+                    <div class="calc-panel-body">
+                        <div class="calc-grid-2" style="margin-bottom:16px">
+                            <div class="calc-group">
+                                <label>Produto</label>
+                                <select id="c-desc-produto" oninput="calcUpdateDescontos()"></select>
+                                <label>Preço de venda base (€)</label>
+                                <input type="number" id="c-desc-preco" value="3.50" min="0" step="0.05" oninput="calcUpdateDescontos()">
+                                <label>Minutos de trabalho por peça</label>
+                                <input type="number" id="c-desc-minutos" value="5" min="0" step="1" oninput="calcUpdateDescontos()">
+                            </div>
+                            <div class="calc-group">
+                                <label>Mão de obra (€/hora)</label>
+                                <input type="number" id="c-mao-obra" value="6" min="0" step="0.5" oninput="calcUpdateDescontos()">
+                                <label>Embalagem por peça (€)</label>
+                                <input type="number" id="c-embalagem" value="0.10" min="0" step="0.01" oninput="calcUpdateDescontos()">
+                                <label>Consumíveis mistura por peça (€)</label>
+                                <input type="number" id="c-consumiveis" value="0.05" min="0" step="0.01" oninput="calcUpdateDescontos()">
+                                <label>Margem mínima aceitável (%)</label>
+                                <input type="number" id="c-margem-min" value="45" min="0" max="100" step="1" oninput="calcUpdateDescontos()">
+                                <div class="calc-result-line">Custo total/peça: <span id="cr-custo-total">€-</span></div>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table" id="calc-desc-table">
+                                <thead>
+                                    <tr>
+                                        <th>Qtd mínima</th>
+                                        <th>Desconto (%)</th>
+                                        <th>Preço unitário (€)</th>
+                                        <th>Lucro/peça (€)</th>
+                                        <th>Margem (%)</th>
+                                        <th>Markup (×)</th>
+                                        <th>Total da encomenda (€)</th>
+                                        <th>Alerta</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calc-desc-body"></tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:16px">
+                            <b style="font-size:13px;">Escalões de desconto:</b>
+                            <div id="desc-tiers-editor" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
             <!-- Configurações -->
             <div id="tab-config" class="tab-content" style="display:none;">
                 <div class="section-header">
@@ -1438,6 +1672,7 @@ function showTab(tab) {
     if (tab === 'stock') loadMateriais();
     if (tab === 'fornecedores') { loadFornecedores(); loadHistoricoCompras(); }
     if (tab === 'investimentos') loadInvestimentos();
+    if (tab === 'calculadora' && !calcInitialized) { calcInitialized = true; calcUpdate(); }
 
     if (window.innerWidth <= 1024) {
         document.getElementById('sidebar').classList.remove('active');
@@ -2715,6 +2950,331 @@ async function deleteInvestimento(id) {
     } else {
         showToast('Erro ao excluir investimento', 'error');
     }
+}
+
+// ============================================================
+// CALCULADORA DE CUSTOS
+// ============================================================
+
+var calcProducts = [
+    { nome: 'Patch airsoft',    forma: 'circulo',         A: 7, B: 7, raio: 0,   fill: 1, base: 'velcro'   },
+    { nome: 'Chaveiro',         forma: 'circulo',         A: 4, B: 4, raio: 0,   fill: 1, base: 'pingente' },
+    { nome: 'Íman frigorífico', forma: 'circulo',         A: 6, B: 6, raio: 0,   fill: 1, base: 'iman'     },
+    { nome: 'Patch retangular', forma: 'ret_arredondado', A: 8, B: 5, raio: 0.8, fill: 1, base: 'velcro'   }
+];
+
+var calcDescTiers = [
+    { qtd: 1,   desconto: 0    },
+    { qtd: 10,  desconto: 0.10 },
+    { qtd: 25,  desconto: 0.15 },
+    { qtd: 50,  desconto: 0.20 },
+    { qtd: 100, desconto: 0.30 }
+];
+
+var calcInitialized = false;
+
+function g(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function gs(id) { return document.getElementById(id).value; }
+
+function calcArea(p) {
+    var A = p.A, B = p.B, r = p.raio || 0;
+    switch (p.forma) {
+        case 'retangulo':       return A * B;
+        case 'circulo':         return Math.PI * (A / 2) * (A / 2);
+        case 'oval':             return Math.PI * (A / 2) * (B / 2);
+        case 'ret_arredondado': return A * B - (4 - Math.PI) * r * r;
+        case 'hexagono':        return (3 * Math.sqrt(3) / 8) * A * A;
+        case 'livre':            return A * B * (p.fill || 1);
+        default:                 return A * B;
+    }
+}
+
+function calcBox(p) {
+    switch (p.forma) {
+        case 'circulo':  return { w: p.A, h: p.A };
+        case 'hexagono': return { w: p.A, h: p.A * Math.sqrt(3) / 2 };
+        default:          return { w: p.A, h: p.B };
+    }
+}
+
+function calcImpressao(p) {
+    var papel_preco = g('c-papel-preco');
+    var papel_folhas = g('c-papel-folhas') || 1;
+    var tinta_preco = g('c-tinta-preco');
+    var tinta_rend = g('c-tinta-rendimento') || 1;
+    var tinta_cores = g('c-tinta-cores') || 4;
+    var tinta_intens = g('c-tinta-intensidade') / 100;
+    var margem = g('c-margem');
+    var espaco = g('c-espaco');
+    var desperdicio = g('c-imp-desperdicio') / 100;
+
+    var A4w = 21, A4h = 29.7, A4area = A4w * A4h, iso_cov = 0.05;
+    var paper_per_sheet = papel_preco / papel_folhas;
+    var ink_per_page = tinta_cores * (tinta_preco / tinta_rend);
+    var ink_per_cm2 = (ink_per_page * tinta_intens) / (A4area * iso_cov);
+
+    var uw = A4w - 2 * margem;
+    var uh = A4h - 2 * margem;
+    var box = calcBox(p);
+    var bw = box.w, bh = box.h;
+
+    var o1 = Math.floor(uw / (bw + espaco)) * Math.floor(uh / (bh + espaco));
+    var o2 = Math.floor(uw / (bh + espaco)) * Math.floor(uh / (bw + espaco));
+    var n = Math.max(o1, o2, 1);
+
+    var paper_piece = paper_per_sheet / n;
+    var ink_piece = ink_per_cm2 * calcArea(p);
+    return (paper_piece + ink_piece) * (1 + desperdicio);
+}
+
+function calcResina(p) {
+    var res_preco = g('c-resina-preco');
+    var res_peso = g('c-resina-peso') || 1;
+    var res_desp = g('c-resina-desperdicio') / 100;
+    var calib_A = g('c-calib-A');
+    var calib_B = g('c-calib-B');
+    var calib_sem = g('c-calib-sem');
+    var calib_com = g('c-calib-com');
+    var calib_forma = gs('c-calib-forma');
+
+    var price_g = res_preco / res_peso;
+
+    var calib_area;
+    if (calib_forma === 'circulo') calib_area = Math.PI * (calib_A / 2) * (calib_A / 2);
+    else if (calib_forma === 'oval') calib_area = Math.PI * (calib_A / 2) * (calib_B / 2);
+    else calib_area = calib_A * calib_B;
+    if (calib_area <= 0) calib_area = 1;
+
+    var resin_applied = calib_com - calib_sem;
+    var density = resin_applied / calib_area;
+    var cost_per_cm2 = density * price_g;
+
+    return cost_per_cm2 * calcArea(p) * (1 + res_desp);
+}
+
+function calcBase(p) {
+    var box = calcBox(p);
+    var bw = box.w, bh = box.h;
+    switch (p.base) {
+        case 'iman': {
+            var ip = g('c-iman-preco');
+            var iw = g('c-iman-largura') || 1;
+            var ih = g('c-iman-altura') || 1;
+            var ic = g('c-iman-corte');
+            var id_ = g('c-iman-desperdicio') / 100;
+            var cpm2 = ip / (iw * ih);
+            var area = (bw + ic) * (bh + ic);
+            return area * cpm2 * (1 + id_);
+        }
+        case 'velcro': {
+            var vp = g('c-velcro-preco');
+            var vm = g('c-velcro-comprimento') || 1;
+            var vw = g('c-velcro-largura') || 1;
+            var vc = g('c-velcro-corte');
+            var vd = g('c-velcro-desperdicio') / 100;
+            if (bw > vw && bh > vw) return null; // não cabe
+            var cpm2 = vp / (vm * 100 * vw);
+            var area = (bw + vc) * (bh + vc);
+            return area * cpm2 * (1 + vd);
+        }
+        case 'pingente': {
+            var pb = g('c-ping-base-preco');
+            var pq = g('c-ping-base-qtd') || 1;
+            var pa = g('c-ping-argola-preco');
+            var aq = g('c-ping-argola-qtd') || 1;
+            return (pb / pq) + (pa / aq);
+        }
+        default: return 0;
+    }
+}
+
+function calcProduct(p) {
+    var imp = calcImpressao(p);
+    var res = calcResina(p);
+    var base = calcBase(p);
+    var mat = imp + res + (base || 0);
+    var mk1 = g('c-markup1');
+    var mk2 = g('c-markup2');
+    var mk3 = g('c-markup3');
+    return { imp: imp, res: res, base: base, mat: mat, preco1: mat * mk1, preco2: mat * mk2, preco3: mat * mk3 };
+}
+
+function fmt(v, dec) {
+    if (v === null || v === undefined) return '—';
+    return '€' + v.toFixed(dec !== undefined ? dec : 3);
+}
+
+function toggleCalcPanel(id) {
+    var el = document.getElementById(id);
+    var arr = document.getElementById('arrow-' + id.replace('panel-', ''));
+    if (el.style.display === 'none') {
+        el.style.display = '';
+        if (arr) arr.textContent = '▼';
+    } else {
+        el.style.display = 'none';
+        if (arr) arr.textContent = '▶';
+    }
+}
+
+function calcRenderProducts() {
+    var tbody = document.getElementById('calc-products-body');
+    var formas = ['retangulo', 'circulo', 'oval', 'ret_arredondado', 'hexagono', 'livre'];
+    var bases = ['nenhuma', 'velcro', 'iman', 'pingente'];
+    var html = '';
+    calcProducts.forEach(function (p, i) {
+        html += '<tr>';
+        html += '<td><input class="form-input" style="width:150px;padding:6px 10px;" value="' + p.nome + '" oninput="calcProducts[' + i + '].nome=this.value;calcUpdateDescontos()"></td>';
+        html += '<td><select class="form-select" style="padding:6px 10px;" onchange="calcProducts[' + i + '].forma=this.value;calcUpdate()">';
+        formas.forEach(function (f) {
+            html += '<option value="' + f + '"' + (p.forma === f ? ' selected' : '') + '>' + f + '</option>';
+        });
+        html += '</select></td>';
+        html += '<td><input type="number" class="form-input" style="width:60px;padding:6px 8px;" value="' + p.A + '" step="0.1" oninput="calcProducts[' + i + '].A=parseFloat(this.value)||0;calcUpdate()"></td>';
+        html += '<td><input type="number" class="form-input" style="width:60px;padding:6px 8px;" value="' + p.B + '" step="0.1" oninput="calcProducts[' + i + '].B=parseFloat(this.value)||0;calcUpdate()"></td>';
+        html += '<td><input type="number" class="form-input" style="width:60px;padding:6px 8px;" value="' + (p.raio || 0) + '" step="0.1" oninput="calcProducts[' + i + '].raio=parseFloat(this.value)||0;calcUpdate()"></td>';
+        html += '<td><select class="form-select" style="padding:6px 10px;" onchange="calcProducts[' + i + '].base=this.value;calcUpdate()">';
+        bases.forEach(function (b) {
+            html += '<option value="' + b + '"' + (p.base === b ? ' selected' : '') + '>' + b + '</option>';
+        });
+        html += '</select></td>';
+        html += '<td><button class="btn-danger-small" onclick="calcProducts.splice(' + i + ',1);calcUpdate()">✕</button></td>';
+        html += '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function calcAddProduct() {
+    calcProducts.push({ nome: 'Novo produto', forma: 'retangulo', A: 5, B: 5, raio: 0, fill: 1, base: 'nenhuma' });
+    calcUpdate();
+}
+
+function calcRenderResults() {
+    var mk1 = g('c-markup1'), mk2 = g('c-markup2'), mk3 = g('c-markup3');
+    document.getElementById('th-mk1').textContent = 'Preço ×' + mk1;
+    document.getElementById('th-mk2').textContent = 'Preço ×' + mk2;
+    document.getElementById('th-mk3').textContent = 'Preço ×' + mk3;
+
+    var tbody = document.getElementById('calc-results-body');
+    var html = '';
+    calcProducts.forEach(function (p) {
+        var r = calcProduct(p);
+        var baseStr = r.base === null ? '⚠️ não cabe' : fmt(r.base);
+        html += '<tr>';
+        html += '<td>' + p.nome + '</td>';
+        html += '<td>' + p.base + '</td>';
+        html += '<td>' + fmt(r.imp) + '</td>';
+        html += '<td>' + fmt(r.res) + '</td>';
+        html += '<td>' + baseStr + '</td>';
+        html += '<td><b>' + fmt(r.mat) + '</b></td>';
+        html += '<td style="color:var(--gold)">' + fmt(r.preco1, 2) + '</td>';
+        html += '<td style="color:var(--gold)">' + fmt(r.preco2, 2) + '</td>';
+        html += '<td style="color:var(--gold)">' + fmt(r.preco3, 2) + '</td>';
+        html += '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function calcUpdateDescontos() {
+    var sel = document.getElementById('c-desc-produto');
+    var curVal = sel.value;
+    var html = '';
+    calcProducts.forEach(function (p) {
+        html += '<option value="' + p.nome + '"' + (p.nome === curVal ? ' selected' : '') + '>' + p.nome + '</option>';
+    });
+    sel.innerHTML = html;
+
+    var nome = sel.value;
+    var p = calcProducts.find(function (x) { return x.nome === nome; });
+    if (!p) { document.getElementById('calc-desc-body').innerHTML = ''; return; }
+
+    var r = calcProduct(p);
+    var mao_obra = g('c-mao-obra');
+    var embalagem = g('c-embalagem');
+    var consumiveis = g('c-consumiveis');
+    var margem_min = g('c-margem-min') / 100;
+    var minutos = g('c-desc-minutos');
+    var preco_base = g('c-desc-preco');
+
+    var mao_obra_piece = (minutos / 60) * mao_obra;
+    var custo_total = r.mat + mao_obra_piece + embalagem + consumiveis;
+    document.getElementById('cr-custo-total').textContent = fmt(custo_total, 3);
+
+    var tiersHtml = '';
+    calcDescTiers.forEach(function (t, i) {
+        tiersHtml += '<div class="calc-desc-tier">';
+        tiersHtml += '<div style="font-size:10px;color:var(--text-light);margin-bottom:4px;">Escalão ' + (i + 1) + '</div>';
+        tiersHtml += 'Qtd: <input type="number" value="' + t.qtd + '" min="1" step="1" oninput="calcDescTiers[' + i + '].qtd=parseInt(this.value)||1;calcUpdateDescontos()"><br>';
+        tiersHtml += 'Desc: <input type="number" value="' + (t.desconto * 100).toFixed(0) + '" min="0" max="100" step="5" oninput="calcDescTiers[' + i + '].desconto=parseFloat(this.value)/100||0;calcUpdateDescontos()">%';
+        tiersHtml += '<button onclick="calcDescTiers.splice(' + i + ',1);calcUpdateDescontos()" style="margin-left:6px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;">✕</button>';
+        tiersHtml += '</div>';
+    });
+    tiersHtml += '<button class="btn-small" onclick="calcDescTiers.push({qtd:200,desconto:0.35});calcUpdateDescontos()">+ Escalão</button>';
+    document.getElementById('desc-tiers-editor').innerHTML = tiersHtml;
+
+    var tbody = document.getElementById('calc-desc-body');
+    html = '';
+    calcDescTiers.forEach(function (t) {
+        var preco = preco_base * (1 - t.desconto);
+        var lucro = preco - custo_total;
+        var margem = preco > 0 ? lucro / preco : 0;
+        var markup = custo_total > 0 ? preco / custo_total : 0;
+        var total = preco * t.qtd;
+        var ok = margem >= margem_min;
+        html += '<tr>';
+        html += '<td>' + t.qtd + '</td>';
+        html += '<td>' + (t.desconto * 100).toFixed(0) + '%</td>';
+        html += '<td>€' + preco.toFixed(2) + '</td>';
+        html += '<td>€' + lucro.toFixed(3) + '</td>';
+        html += '<td>' + (margem * 100).toFixed(1) + '%</td>';
+        html += '<td>' + markup.toFixed(2) + '×</td>';
+        html += '<td>€' + total.toFixed(2) + '</td>';
+        html += '<td class="' + (ok ? 'calc-alert-ok' : 'calc-alert-bad') + '">' + (ok ? '✅ OK' : '⚠️ abaixo da margem') + '</td>';
+        html += '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function calcUpdateSummaryInputs() {
+    var papel_p = g('c-papel-preco'), papel_f = g('c-papel-folhas') || 1;
+    document.getElementById('cr-papel-folha').textContent = '€' + (papel_p / papel_f).toFixed(3);
+
+    var t_p = g('c-tinta-preco'), t_r = g('c-tinta-rendimento') || 1, t_c = g('c-tinta-cores');
+    document.getElementById('cr-tinta-pagina').textContent = '€' + (t_c * t_p / t_r).toFixed(4);
+
+    var mar = g('c-margem');
+    document.getElementById('cr-area-util').textContent = (21 - 2 * mar).toFixed(1) + ' × ' + (29.7 - 2 * mar).toFixed(1) + ' cm';
+
+    var r_p = g('c-resina-preco'), r_w = g('c-resina-peso') || 1;
+    document.getElementById('cr-resina-grama').textContent = '€' + (r_p / r_w).toFixed(4);
+
+    var caA = g('c-calib-A'), caB = g('c-calib-B'), caF = gs('c-calib-forma');
+    var caS = g('c-calib-sem'), caC = g('c-calib-com');
+    var caArea;
+    if (caF === 'circulo') caArea = Math.PI * (caA / 2) * (caA / 2);
+    else if (caF === 'oval') caArea = Math.PI * (caA / 2) * (caB / 2);
+    else caArea = caA * caB;
+    if (caArea <= 0) caArea = 1;
+    var dens = (caC - caS) / caArea;
+    var cpm2 = dens * (g('c-resina-preco') / (g('c-resina-peso') || 1));
+    document.getElementById('cr-densidade').textContent = dens.toFixed(4) + ' g/cm²';
+    document.getElementById('cr-resina-cm2').textContent = '€' + cpm2.toFixed(5);
+
+    var im_p = g('c-iman-preco'), im_w = g('c-iman-largura') || 1, im_h = g('c-iman-altura') || 1;
+    document.getElementById('cr-iman-cm2').textContent = '€' + (im_p / (im_w * im_h)).toFixed(5);
+
+    var vp = g('c-velcro-preco'), vm = g('c-velcro-comprimento') || 1, vw = g('c-velcro-largura') || 1;
+    document.getElementById('cr-velcro-cm2').textContent = '€' + (vp / (vm * 100 * vw)).toFixed(5);
+
+    var pb = g('c-ping-base-preco'), pq = g('c-ping-base-qtd') || 1;
+    var pa = g('c-ping-argola-preco'), aq = g('c-ping-argola-qtd') || 1;
+    document.getElementById('cr-pingente-unit').textContent = '€' + ((pb / pq) + (pa / aq)).toFixed(3);
+}
+
+function calcUpdate() {
+    calcUpdateSummaryInputs();
+    calcRenderProducts();
+    calcRenderResults();
+    calcUpdateDescontos();
 }
 
 // Estatísticas

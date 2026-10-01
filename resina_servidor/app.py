@@ -210,6 +210,21 @@ def init_db():
         )
     """)
 
+    # Tabela investimentos (máquinas e equipamentos a comprar)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS investimentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            descricao TEXT DEFAULT '',
+            preco_est REAL DEFAULT 0,
+            link TEXT DEFAULT '',
+            prioridade TEXT DEFAULT 'Média',
+            estado TEXT DEFAULT 'Em análise',
+            notas TEXT DEFAULT '',
+            criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     # Migração: adicionar colunas novas à tabela materiais (fornecedor associado, preço mais recente, foto)
     materiais_colunas_novas = [
         ('fornecedor_id', 'INTEGER REFERENCES fornecedores(id)'),
@@ -707,6 +722,76 @@ def api_compra(id):
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+def row_to_investimento(row):
+    return {
+        "id": row[0], "nome": row[1], "descricao": row[2], "preco_est": row[3],
+        "link": row[4], "prioridade": row[5], "estado": row[6], "notas": row[7],
+        "criado_em": row[8]
+    }
+
+@app.route("/api/investimentos", methods=["GET", "POST"])
+def api_investimentos():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        nome = (data.get('nome') or '').strip()
+        if not nome:
+            conn.close()
+            return jsonify({"success": False, "error": "Nome obrigatório"}), 400
+        cursor.execute("""
+            INSERT INTO investimentos (nome, descricao, preco_est, link, prioridade, estado, notas)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            nome, data.get('descricao', ''), data.get('preco_est') or 0,
+            data.get('link', ''), data.get('prioridade', 'Média'),
+            data.get('estado', 'Em análise'), data.get('notas', '')
+        ))
+        conn.commit()
+        investimento_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": investimento_id})
+
+    cursor.execute("""
+        SELECT id, nome, descricao, preco_est, link, prioridade, estado, notas, criado_em
+        FROM investimentos
+        ORDER BY CASE prioridade WHEN 'Alta' THEN 0 WHEN 'Média' THEN 1 WHEN 'Baixa' THEN 2 ELSE 3 END, criado_em DESC
+    """)
+    rows = cursor.fetchall()
+    investimentos = [row_to_investimento(row) for row in rows]
+    conn.close()
+    return jsonify(investimentos)
+
+@app.route("/api/investimentos/<int:id>", methods=["PUT", "DELETE"])
+def api_investimento(id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        nome = (data.get('nome') or '').strip()
+        if not nome:
+            conn.close()
+            return jsonify({"success": False, "error": "Nome obrigatório"}), 400
+        cursor.execute("""
+            UPDATE investimentos SET nome=?, descricao=?, preco_est=?, link=?, prioridade=?, estado=?, notas=?
+            WHERE id=?
+        """, (
+            nome, data.get('descricao', ''), data.get('preco_est') or 0,
+            data.get('link', ''), data.get('prioridade', 'Média'),
+            data.get('estado', 'Em análise'), data.get('notas', ''), id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+    elif request.method == "DELETE":
+        cursor.execute("DELETE FROM investimentos WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():

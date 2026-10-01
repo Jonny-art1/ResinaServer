@@ -461,6 +461,24 @@
             padding: 5px 10px; margin: 14px 0 4px; border-left: 2px solid var(--gold);
         }
         .cat-divider:first-child { margin-top: 2px; }
+
+        /* ====== INVESTIMENTOS ====== */
+        .inv-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 18px 20px; display: flex; align-items: flex-start; gap: 16px; transition: border-color 0.3s;
+        }
+        .inv-card:hover { border-color: rgba(6,182,212,0.3); }
+        .inv-card-info { flex: 1; min-width: 0; }
+        .inv-card-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+        .inv-card-name { font-size: 15px; font-weight: 600; color: var(--text); }
+        .inv-badge { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+        .inv-estado-lbl { font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .inv-card-desc { font-size: 13px; color: var(--text-light); margin-bottom: 8px; }
+        .inv-card-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-light); }
+        .inv-card-price { font-size: 16px; font-weight: 700; color: var(--gold); }
+        .inv-card-link { color: var(--gold-light); text-decoration: none; }
+        .inv-card-link:hover { text-decoration: underline; }
+        .inv-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -588,6 +606,10 @@
             <div class="nav-item" onclick="showTab('fornecedores')" data-tab="fornecedores">
                 <span class="nav-icon">🏭</span>
                 <span>Fornecedores</span>
+            </div>
+            <div class="nav-item" onclick="showTab('investimentos')" data-tab="investimentos">
+                <span class="nav-icon">💰</span>
+                <span>Investimentos</span>
             </div>
             <div class="nav-item" onclick="showTab('calculadora')" data-tab="calculadora">
                 <span class="nav-icon">🧮</span>
@@ -817,6 +839,24 @@
                     <div class="empty-state-icon">📋</div>
                     <h3>Sem compras registadas</h3>
                     <p>Regista uma compra a partir do Stock para veres o histórico aqui.</p>
+                </div>
+            </div>
+
+            <!-- Investimentos -->
+            <div id="tab-investimentos" class="tab-content" style="display:none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-title-icon">💰</div>
+                        Investimentos
+                    </div>
+                    <button class="btn btn-primary" onclick="openInvestimentoModal()">➕ Novo Investimento</button>
+                </div>
+
+                <div id="investimentosList" style="display:flex;flex-direction:column;gap:12px;"></div>
+                <div class="empty-state" id="investimentosEmpty" style="display:none;">
+                    <div class="empty-state-icon">💰</div>
+                    <h3>Nenhum investimento registado</h3>
+                    <p>Clique em "Novo Investimento" para começar a planear compras de equipamento.</p>
                 </div>
             </div>
 
@@ -1214,6 +1254,66 @@
         </div>
     </div>
 
+    <!-- Modal Investimento -->
+    <div class="modal-overlay" id="investimentoModal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <div class="modal-title" id="investimentoModalTitle">Novo Investimento</div>
+                <button class="modal-close" onclick="closeInvestimentoModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="investimentoForm" onsubmit="saveInvestimento(event)">
+                    <input type="hidden" id="investimentoId">
+                    <div class="form-group">
+                        <label class="form-label">Nome / Equipamento *</label>
+                        <input type="text" class="form-input" id="investimentoNome" required placeholder="Ex: Impressora UV, Forno de cura...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-textarea" id="investimentoDescricao" placeholder="Para que serve, modelo, especificações..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Preço Estimado (€)</label>
+                            <input type="number" class="form-input" id="investimentoPreco" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Link (loja / produto)</label>
+                            <input type="url" class="form-input" id="investimentoLink" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Prioridade</label>
+                            <select class="form-select" id="investimentoPrioridade">
+                                <option value="Alta">🔴 Alta</option>
+                                <option value="Média" selected>🟡 Média</option>
+                                <option value="Baixa">🟢 Baixa</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" id="investimentoEstado">
+                                <option value="Em análise" selected>🔍 Em análise</option>
+                                <option value="Aprovado">✅ Aprovado</option>
+                                <option value="Encomendado">📦 Encomendado</option>
+                                <option value="Recebido">🏁 Recebido</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-textarea" id="investimentoNotas" placeholder="Observações, comparações, onde encontrei..."></textarea>
+                    </div>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeInvestimentoModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">💾 Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Relatório Cliente -->
     <div class="modal-overlay" id="relatorioModal">
         <div class="modal" style="max-width:700px;">
@@ -1244,6 +1344,8 @@ let editingMaterial = null;
 let themeConfig = JSON.parse(localStorage.getItem('elements_theme') || '{}');
 let fornecedores = [];
 let editingFornecedor = null;
+let investimentos = [];
+let editingInvestimento = null;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -1279,6 +1381,7 @@ function showApp() {
     loadOrcamentos();
     loadMateriais();
     loadFornecedores();
+    loadInvestimentos();
     updateStats();
 }
 
@@ -1334,6 +1437,7 @@ function showTab(tab) {
     if (tab === 'orcamentos') loadOrcamentos();
     if (tab === 'stock') loadMateriais();
     if (tab === 'fornecedores') { loadFornecedores(); loadHistoricoCompras(); }
+    if (tab === 'investimentos') loadInvestimentos();
 
     if (window.innerWidth <= 1024) {
         document.getElementById('sidebar').classList.remove('active');
@@ -2492,6 +2596,124 @@ async function deleteCompra(id) {
         loadMateriais();
     } else {
         showToast('Erro ao excluir compra', 'error');
+    }
+}
+
+// Investimentos
+const INV_COR_PRIORIDADE = { 'Alta': 'var(--danger)', 'Média': 'var(--warning)', 'Baixa': 'var(--success)' };
+const INV_COR_ESTADO = { 'Em análise': 'var(--text-light)', 'Aprovado': 'var(--info)', 'Encomendado': 'var(--warning)', 'Recebido': 'var(--success)' };
+const INV_ICONE_ESTADO = { 'Em análise': '🔍', 'Aprovado': '✅', 'Encomendado': '📦', 'Recebido': '🏁' };
+
+async function loadInvestimentos() {
+    investimentos = await apiGet('/api/investimentos');
+    renderInvestimentos();
+}
+
+function renderInvestimentos() {
+    const list = document.getElementById('investimentosList');
+    const empty = document.getElementById('investimentosEmpty');
+    if (!list) return;
+
+    if (!investimentos.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = investimentos.map(inv => `
+        <div class="inv-card">
+            <div class="inv-card-info">
+                <div class="inv-card-title-row">
+                    <span class="inv-card-name">${inv.nome}</span>
+                    <span class="inv-badge" style="background:rgba(255,255,255,0.08);color:${INV_COR_PRIORIDADE[inv.prioridade] || 'var(--text-light)'}">${inv.prioridade}</span>
+                    <span class="inv-estado-lbl" style="color:${INV_COR_ESTADO[inv.estado] || 'var(--text-light)'}">${INV_ICONE_ESTADO[inv.estado] || ''} ${inv.estado}</span>
+                </div>
+                ${inv.descricao ? `<div class="inv-card-desc">${inv.descricao}</div>` : ''}
+                <div class="inv-card-meta">
+                    ${inv.preco_est ? `<span class="inv-card-price">€${parseFloat(inv.preco_est).toFixed(2)}</span>` : ''}
+                    ${inv.link ? `<a href="${inv.link}" target="_blank" rel="noopener" class="inv-card-link">🔗 Ver produto</a>` : ''}
+                    ${inv.notas ? `<span title="${inv.notas}">📝 ${inv.notas.length > 40 ? inv.notas.substring(0, 40) + '…' : inv.notas}</span>` : ''}
+                </div>
+            </div>
+            <div class="inv-card-actions">
+                <button class="card-btn" onclick="editInvestimento(${inv.id})" title="Editar">✏️</button>
+                <button class="card-btn" onclick="deleteInvestimento(${inv.id})" title="Excluir">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openInvestimentoModal() {
+    editingInvestimento = null;
+    document.getElementById('investimentoForm').reset();
+    document.getElementById('investimentoModalTitle').textContent = 'Novo Investimento';
+    document.getElementById('investimentoModal').classList.add('active');
+    document.getElementById('investimentoNome').focus();
+}
+
+function closeInvestimentoModal() {
+    document.getElementById('investimentoModal').classList.remove('active');
+    editingInvestimento = null;
+}
+
+function editInvestimento(id) {
+    const inv = investimentos.find(x => x.id === id);
+    if (!inv) return;
+    editingInvestimento = id;
+
+    document.getElementById('investimentoId').value = inv.id;
+    document.getElementById('investimentoNome').value = inv.nome;
+    document.getElementById('investimentoDescricao').value = inv.descricao || '';
+    document.getElementById('investimentoPreco').value = inv.preco_est || '';
+    document.getElementById('investimentoLink').value = inv.link || '';
+    document.getElementById('investimentoPrioridade').value = inv.prioridade || 'Média';
+    document.getElementById('investimentoEstado').value = inv.estado || 'Em análise';
+    document.getElementById('investimentoNotas').value = inv.notas || '';
+
+    document.getElementById('investimentoModalTitle').textContent = 'Editar Investimento';
+    document.getElementById('investimentoModal').classList.add('active');
+}
+
+async function saveInvestimento(e) {
+    e.preventDefault();
+
+    const data = {
+        nome: document.getElementById('investimentoNome').value,
+        descricao: document.getElementById('investimentoDescricao').value,
+        preco_est: parseFloat(document.getElementById('investimentoPreco').value) || 0,
+        link: document.getElementById('investimentoLink').value,
+        prioridade: document.getElementById('investimentoPrioridade').value,
+        estado: document.getElementById('investimentoEstado').value,
+        notas: document.getElementById('investimentoNotas').value
+    };
+
+    let res;
+    if (editingInvestimento) {
+        res = await apiPut('/api/investimentos/' + editingInvestimento, data);
+    } else {
+        res = await apiPost('/api/investimentos', data);
+    }
+
+    if (res.success) {
+        showToast(editingInvestimento ? 'Investimento atualizado!' : 'Investimento adicionado!', 'success');
+        closeInvestimentoModal();
+        loadInvestimentos();
+    } else {
+        showToast('Erro ao salvar investimento', 'error');
+    }
+}
+
+async function deleteInvestimento(id) {
+    const inv = investimentos.find(x => x.id === id);
+    if (!inv) return;
+    if (!confirm('Tem certeza que deseja excluir "' + inv.nome + '"?')) return;
+    const res = await apiDelete('/api/investimentos/' + id);
+    if (res.success) {
+        showToast('Investimento excluído', 'success');
+        loadInvestimentos();
+    } else {
+        showToast('Erro ao excluir investimento', 'error');
     }
 }
 

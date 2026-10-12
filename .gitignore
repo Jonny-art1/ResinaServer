@@ -4,3 +4,4 @@ flask_session/
 *.db
 resina_servidor/static/uploads/
 resina_servidor/static/fotos_materiais/
+*.db.backup-*

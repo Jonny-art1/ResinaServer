@@ -225,6 +225,37 @@ def init_db():
         )
     """)
 
+    # Tabela sócios
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS socios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            ativo INTEGER DEFAULT 1,
+            criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Tabela financas (entradas e saídas do negócio)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS financas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            data TEXT NOT NULL,
+            descricao TEXT DEFAULT '',
+            categoria TEXT DEFAULT '',
+            valor REAL NOT NULL,
+            socio_id INTEGER,
+            pedido_id INTEGER,
+            compra_id INTEGER,
+            metodo_pagamento TEXT DEFAULT '',
+            notas TEXT DEFAULT '',
+            criado_em TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (socio_id) REFERENCES socios(id),
+            FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+            FOREIGN KEY (compra_id) REFERENCES compras(id)
+        )
+    """)
+
     # Migração: adicionar colunas novas à tabela materiais (fornecedor associado, preço mais recente, foto)
     materiais_colunas_novas = [
         ('fornecedor_id', 'INTEGER REFERENCES fornecedores(id)'),
@@ -279,6 +310,37 @@ def migrar_categorias():
 init_db()
 migrar_categorias()
 
+def sync_financa_pedido(conn, pedido_id, status, price, client_name, product):
+    """
+    Mantém uma entrada em 'financas' sincronizada com o estado do pedido:
+    cria/atualiza a entrada quando o pedido passa a 'Entregue', remove-a se deixar de estar.
+    Usa pedido_id + categoria='Venda de pedido' como chave para nunca duplicar.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM financas WHERE pedido_id = ? AND categoria = 'Venda de pedido'",
+        (pedido_id,)
+    )
+    existente = cursor.fetchone()
+
+    if status == 'Entregue':
+        valor = float(price or 0)
+        if valor <= 0:
+            return
+        descricao = f"Pedido #{pedido_id} — {client_name or 'Cliente'}"
+        if product:
+            descricao += f" ({product})"
+        if existente:
+            cursor.execute("UPDATE financas SET valor=?, descricao=? WHERE id=?", (valor, descricao, existente[0]))
+        else:
+            cursor.execute("""
+                INSERT INTO financas (tipo, data, descricao, categoria, valor, pedido_id)
+                VALUES ('entrada', ?, ?, 'Venda de pedido', ?, ?)
+            """, (datetime.now().strftime('%Y-%m-%d'), descricao, valor, pedido_id))
+    else:
+        if existente:
+            cursor.execute("DELETE FROM financas WHERE id = ?", (existente[0],))
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -311,6 +373,10 @@ def api_pedidos():
                 cursor.execute("UPDATE clientes SET phone = ? WHERE name = ?",
                            (data.get('clientPhone'), data.get('clientName')))
             conn.commit()
+
+        sync_financa_pedido(conn, pedido_id, data.get('status', 'Pendente'), data.get('price', 0),
+                            data.get('clientName', ''), data.get('product', ''))
+        conn.commit()
 
         conn.close()
         return jsonify({"success": True, "id": pedido_id})
@@ -361,12 +427,15 @@ def api_pedido(id):
             data.get('deadline'), data.get('address'), data.get('notes'),
             data.get('image'), data.get('status'), data.get('pdf'), id
         ))
+        sync_financa_pedido(conn, id, data.get('status'), data.get('price', 0),
+                            data.get('clientName', ''), data.get('product', ''))
         conn.commit()
         conn.close()
         return jsonify({"success": True})
 
     elif request.method == "DELETE":
         cursor.execute("DELETE FROM pedidos WHERE id = ?", (id,))
+        cursor.execute("DELETE FROM financas WHERE pedido_id = ? AND categoria = 'Venda de pedido'", (id,))
         conn.commit()
         conn.close()
         return jsonify({"success": True})
@@ -792,6 +861,275 @@ def api_investimento(id):
         conn.commit()
         conn.close()
         return jsonify({"success": True})
+
+def row_to_socio(row):
+    return {"id": row[0], "nome": row[1], "ativo": bool(row[2]), "criado_em": row[3]}
+
+@app.route("/api/socios", methods=["GET", "POST"])
+def api_socios():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        nome = (data.get('nome') or '').strip()
+        if not nome:
+            conn.close()
+            return jsonify({"success": False, "error": "Nome obrigatório"}), 400
+        cursor.execute("INSERT INTO socios (nome, ativo) VALUES (?, 1)", (nome,))
+        conn.commit()
+        socio_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": socio_id})
+
+    query = "SELECT id, nome, ativo, criado_em FROM socios WHERE 1=1"
+    params = []
+    if request.args.get('ativo') == '1':
+        query += " AND ativo = 1"
+    query += " ORDER BY ativo DESC, nome ASC"
+    cursor.execute(query, params)
+    socios = [row_to_socio(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(socios)
+
+@app.route("/api/socios/<int:id>", methods=["PUT"])
+def api_socio(id):
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+
+    campos = []
+    valores = []
+    if 'nome' in data:
+        nome = (data.get('nome') or '').strip()
+        if not nome:
+            conn.close()
+            return jsonify({"success": False, "error": "Nome obrigatório"}), 400
+        campos.append("nome=?")
+        valores.append(nome)
+    if 'ativo' in data:
+        campos.append("ativo=?")
+        valores.append(1 if data.get('ativo') else 0)
+
+    if not campos:
+        conn.close()
+        return jsonify({"success": False, "error": "Nada para atualizar"}), 400
+
+    valores.append(id)
+    cursor.execute(f"UPDATE socios SET {', '.join(campos)} WHERE id=?", valores)
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+VALID_TIPOS_FINANCA = {'entrada', 'saida'}
+
+def validar_data_financa(data_str):
+    try:
+        datetime.strptime(data_str, '%Y-%m-%d')
+        return True
+    except (ValueError, TypeError):
+        return False
+
+def row_to_financa(row):
+    return {
+        "id": row[0], "tipo": row[1], "data": row[2], "descricao": row[3],
+        "categoria": row[4], "valor": row[5], "socio_id": row[6], "socio_nome": row[7],
+        "pedido_id": row[8], "compra_id": row[9], "metodo_pagamento": row[10],
+        "notas": row[11], "criado_em": row[12]
+    }
+
+def validar_financa(data):
+    tipo = data.get('tipo')
+    if tipo not in VALID_TIPOS_FINANCA:
+        return None, "Tipo inválido (use 'entrada' ou 'saida')"
+    try:
+        valor = float(data.get('valor'))
+    except (TypeError, ValueError):
+        return None, "Valor inválido"
+    if valor <= 0:
+        return None, "Valor deve ser maior que zero"
+    data_mov = data.get('data') or ''
+    if not validar_data_financa(data_mov):
+        return None, "Data inválida (use AAAA-MM-DD)"
+    return {
+        "tipo": tipo, "valor": valor, "data": data_mov,
+        "descricao": data.get('descricao', ''), "categoria": data.get('categoria', ''),
+        "socio_id": data.get('socio_id') or None, "pedido_id": data.get('pedido_id') or None,
+        "compra_id": data.get('compra_id') or None, "metodo_pagamento": data.get('metodo_pagamento', ''),
+        "notas": data.get('notas', '')
+    }, None
+
+@app.route("/api/financas", methods=["GET", "POST"])
+def api_financas():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        data = request.get_json()
+        f, erro = validar_financa(data)
+        if erro:
+            conn.close()
+            return jsonify({"success": False, "error": erro}), 400
+        cursor.execute("""
+            INSERT INTO financas (tipo, data, descricao, categoria, valor, socio_id, pedido_id, compra_id, metodo_pagamento, notas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f["tipo"], f["data"], f["descricao"], f["categoria"], f["valor"],
+            f["socio_id"], f["pedido_id"], f["compra_id"], f["metodo_pagamento"], f["notas"]
+        ))
+        conn.commit()
+        financa_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"success": True, "id": financa_id})
+
+    de = request.args.get('de')
+    ate = request.args.get('ate')
+    tipo_filter = request.args.get('tipo')
+    categoria_filter = request.args.get('categoria')
+    socio_filter = request.args.get('socio_id')
+
+    query = """
+        SELECT f.id, f.tipo, f.data, f.descricao, f.categoria, f.valor, f.socio_id, s.nome,
+               f.pedido_id, f.compra_id, f.metodo_pagamento, f.notas, f.criado_em
+        FROM financas f
+        LEFT JOIN socios s ON f.socio_id = s.id
+        WHERE 1=1
+    """
+    params = []
+    if de:
+        query += " AND f.data >= ?"
+        params.append(de)
+    if ate:
+        query += " AND f.data <= ?"
+        params.append(ate)
+    if tipo_filter:
+        query += " AND f.tipo = ?"
+        params.append(tipo_filter)
+    if categoria_filter:
+        query += " AND f.categoria = ?"
+        params.append(categoria_filter)
+    if socio_filter == 'sem_socio':
+        query += " AND f.socio_id IS NULL"
+    elif socio_filter:
+        query += " AND f.socio_id = ?"
+        params.append(socio_filter)
+    query += " ORDER BY f.data DESC, f.id DESC"
+
+    cursor.execute(query, params)
+    financas = [row_to_financa(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(financas)
+
+@app.route("/api/financas/<int:id>", methods=["PUT", "DELETE"])
+def api_financa(id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        f, erro = validar_financa(data)
+        if erro:
+            conn.close()
+            return jsonify({"success": False, "error": erro}), 400
+        cursor.execute("""
+            UPDATE financas SET tipo=?, data=?, descricao=?, categoria=?, valor=?, socio_id=?,
+            pedido_id=?, compra_id=?, metodo_pagamento=?, notas=? WHERE id=?
+        """, (
+            f["tipo"], f["data"], f["descricao"], f["categoria"], f["valor"],
+            f["socio_id"], f["pedido_id"], f["compra_id"], f["metodo_pagamento"], f["notas"], id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+    elif request.method == "DELETE":
+        cursor.execute("DELETE FROM financas WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+
+@app.route("/api/financas/resumo")
+def api_financas_resumo():
+    de = request.args.get('de')
+    ate = request.args.get('ate')
+    socio_filter = request.args.get('socio_id')
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    where = "WHERE 1=1"
+    params = []
+    if de:
+        where += " AND f.data >= ?"
+        params.append(de)
+    if ate:
+        where += " AND f.data <= ?"
+        params.append(ate)
+    if socio_filter == 'sem_socio':
+        where += " AND f.socio_id IS NULL"
+    elif socio_filter:
+        where += " AND f.socio_id = ?"
+        params.append(socio_filter)
+
+    cursor.execute(f"""
+        SELECT f.tipo, f.socio_id, s.nome, f.categoria, f.valor, f.data
+        FROM financas f LEFT JOIN socios s ON f.socio_id = s.id
+        {where}
+    """, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    total_entradas = 0.0
+    total_saidas = 0.0
+    por_socio = {}
+    por_categoria_entradas = {}
+    por_categoria_saidas = {}
+    por_mes = {}
+
+    for tipo, socio_id, socio_nome, categoria, valor, data_mov in rows:
+        valor = float(valor or 0)
+        chave_socio = socio_id if socio_id is not None else 'sem_socio'
+        nome_socio = socio_nome if socio_id is not None else 'Empresa / sem sócio'
+        if chave_socio not in por_socio:
+            por_socio[chave_socio] = {"socio_id": socio_id, "socio": nome_socio, "entradas": 0.0, "saidas": 0.0}
+
+        mes = (data_mov or '')[:7] or 'sem-data'
+        if mes not in por_mes:
+            por_mes[mes] = {"mes": mes, "entradas": 0.0, "saidas": 0.0}
+
+        categoria_chave = categoria or 'Sem categoria'
+        if tipo == 'entrada':
+            total_entradas += valor
+            por_socio[chave_socio]["entradas"] += valor
+            por_categoria_entradas[categoria_chave] = por_categoria_entradas.get(categoria_chave, 0.0) + valor
+            por_mes[mes]["entradas"] += valor
+        else:
+            total_saidas += valor
+            por_socio[chave_socio]["saidas"] += valor
+            por_categoria_saidas[categoria_chave] = por_categoria_saidas.get(categoria_chave, 0.0) + valor
+            por_mes[mes]["saidas"] += valor
+
+    por_socio_lista = []
+    for v in por_socio.values():
+        v["saldo"] = v["entradas"] - v["saidas"]
+        por_socio_lista.append(v)
+    por_socio_lista.sort(key=lambda x: x["saidas"], reverse=True)
+
+    por_mes_lista = sorted(por_mes.values(), key=lambda x: x["mes"])
+    for m in por_mes_lista:
+        m["saldo"] = m["entradas"] - m["saidas"]
+
+    return jsonify({
+        "total_entradas": total_entradas,
+        "total_saidas": total_saidas,
+        "saldo": total_entradas - total_saidas,
+        "por_socio": por_socio_lista,
+        "por_categoria": {
+            "entradas": [{"categoria": k, "valor": v} for k, v in sorted(por_categoria_entradas.items(), key=lambda x: -x[1])],
+            "saidas": [{"categoria": k, "valor": v} for k, v in sorted(por_categoria_saidas.items(), key=lambda x: -x[1])]
+        },
+        "por_mes": por_mes_lista
+    })
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():

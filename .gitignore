@@ -1,4 +1,6 @@
 __pycache__/
 *.pyc
 flask_session/
-resina_servidor/pedidos.db
+*.db
+resina_servidor/static/uploads/
+resina_servidor/static/fotos_materiais/
